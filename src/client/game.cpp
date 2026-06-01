@@ -1511,6 +1511,13 @@ void Game::preyAction(int slot, int actionType, int index)
     m_protocolGame->sendPreyAction(slot, actionType, index);
 }
 
+void Game::preyHuntingAction(int slot, int actionType, bool upgrade, int raceId)
+{
+    if (!canPerformGameAction())
+        return;
+    m_protocolGame->sendPreyHuntingAction(slot, actionType, upgrade, raceId);
+}
+
 void Game::preyRequest()
 {
     if (!canPerformGameAction())

@@ -321,6 +321,10 @@ function refreshStashItems(searchText)
 
   for key, itemData in pairs(listItems) do
     local stashItem = Item.create(itemData.itemId, itemData.itemCount)
+    local tier = itemData.tier or 0
+    if stashItem and tier > 0 and stashItem.setTier then
+      stashItem:setTier(tier)
+    end
     if searchText and #searchText > 0 and not matchText(searchText, itemData.marketData.name) then
       goto continue
     end
@@ -356,7 +360,10 @@ function refreshStashItems(searchText)
 
     local itemWidget = itemBox:getChildById('item')
     itemWidget:setItem(stashItem)
-    itemWidget.stashTier = itemData.tier or 0
+    if ItemsDatabase and ItemsDatabase.setTier then
+      ItemsDatabase.setTier(itemWidget, stashItem)
+    end
+    itemWidget.stashTier = tier
     itemWidget:setTooltip(itemData.marketData.name)
     itemWidget:setActionId(itemData.itemCount)
     itemWidget.onMouseRelease = function(widget, mousePos, mouseButton)
@@ -447,6 +454,9 @@ function withdrawItem(widget)
   countWithdraw = g_ui.createWidget('CountWithdraw', rootWidget)
   countWithdraw.contentPanel.item:setItemId(widget:getItemId())
   countWithdraw.contentPanel.item:setItemCount(itemCount)
+  if countWithdraw.contentPanel.item.setTier then
+    countWithdraw.contentPanel.item:setTier(widget.stashTier or 0)
+  end
   g_client.setInputLockWidget(countWithdraw)
 
   local scrollbar = countWithdraw:recursiveGetChildById("countScrollBar")

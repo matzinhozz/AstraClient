@@ -335,7 +335,8 @@ function CyclopediaItems.itemListChildFocus(self, selected)
   CyclopediaItems.showItemPrice(selected.item:getItem())
 
   local isMarketPrice = false
-  if itemsData["primaryLootValueSources"][tostring(selected.item:getItemId())] then
+  local primaryLootValueSources = itemsData["primaryLootValueSources"] or {}
+  if primaryLootValueSources[tostring(selected.item:getItemId())] then
     VisibleCyclopediaPanel.leftInfo.circlenpc:setChecked(false)
     VisibleCyclopediaPanel.leftInfo.circlemarket:setChecked(true)
   else
@@ -504,7 +505,8 @@ function CyclopediaItems.showItemPrice(item)
 	VisibleCyclopediaPanel.panelitemshide.averageMarketPrice:setText(comma_value(avgMarket))
 
 	local isMarketPrice = false
-	if itemsData["primaryLootValueSources"][tostring(item:getId())] then
+	local primaryLootValueSources = itemsData["primaryLootValueSources"] or {}
+	if primaryLootValueSources[tostring(item:getId())] then
 		isMarketPrice = true
 	end
 
@@ -513,8 +515,9 @@ function CyclopediaItems.showItemPrice(item)
 		resulting = avgMarket
 	end
 
-	if itemsData["customSalePrices"][tostring(item:getId())] then
-		resulting = itemsData["customSalePrices"][tostring(item:getId())]
+	local customSalePrices = itemsData["customSalePrices"] or {}
+	if customSalePrices[tostring(item:getId())] then
+		resulting = customSalePrices[tostring(item:getId())]
 		VisibleCyclopediaPanel.panelitemshide.customPrice:setText(resulting)
 	else
 		VisibleCyclopediaPanel.panelitemshide.customPrice:clearText(true)
@@ -920,7 +923,8 @@ function CyclopediaItems.getCurrentItemValue(item)
 	local avgMarket = item:getAverageMarketValue()
 	local isMarketPrice = false
 
-	if itemsData["primaryLootValueSources"][tostring(item:getId())] then
+	local primaryLootValueSources = itemsData["primaryLootValueSources"] or {}
+	if primaryLootValueSources[tostring(item:getId())] then
 		isMarketPrice = true
 	end
 
@@ -929,8 +933,9 @@ function CyclopediaItems.getCurrentItemValue(item)
 		resulting = avgMarket
 	end
 
-	if itemsData["customSalePrices"][tostring(item:getId())] then
-		resulting = itemsData["customSalePrices"][tostring(item:getId())]
+	local customSalePrices = itemsData["customSalePrices"] or {}
+	if customSalePrices[tostring(item:getId())] then
+		resulting = customSalePrices[tostring(item:getId())]
 	end
 	return resulting
 end

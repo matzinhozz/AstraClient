@@ -158,6 +158,7 @@ public:
     bool isGround();
     bool inCorpse() override;
     bool isQuiver();
+    bool isAmmo();
     int getWeaponType();
     int getClassification() { const int classification = Thing::getClassification(); return classification > 0 ? classification : getWeaponType(); }
 

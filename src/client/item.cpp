@@ -144,8 +144,12 @@ bool Item::drawToImage(const Point& dest, ImagePtr image)
 
 void Item::setId(uint32 id)
 {
-    if(!g_things.isValidDatId(id, ThingCategoryItem))
-        id = 0;
+    if(id == 0 || !g_things.isValidDatId(id, ThingCategoryItem)) {
+        m_serverId = 0;
+        m_clientId = 0;
+        return;
+    }
+
     m_serverId = g_things.findItemTypeByClientId(id)->getServerId();
     m_clientId = id;
 
@@ -170,14 +174,21 @@ void Item::setId(uint32 id)
 
 void Item::setOtbId(uint16 id)
 {
-    if(!g_things.isValidOtbId(id))
-        id = 0;
+    if(id == 0 || !g_things.isValidOtbId(id)) {
+        m_serverId = 0;
+        m_clientId = 0;
+        return;
+    }
+
     auto itemType = g_things.getItemType(id);
     m_serverId = id;
 
     id = itemType->getClientId();
-    if(!g_things.isValidDatId(id, ThingCategoryItem))
-        id = 0;
+    if(id == 0 || !g_things.isValidDatId(id, ThingCategoryItem)) {
+        m_clientId = 0;
+        return;
+    }
+
     m_clientId = id;
 
     if (g_game.getFeature(Otc::GameEnhancedAnimations)) {
@@ -349,6 +360,14 @@ bool Item::isQuiver()
     default:
         return false;
     }
+}
+
+bool Item::isAmmo()
+{
+    if (m_serverId == 0)
+        return false;
+
+    return g_things.getItemType(m_serverId)->getCategory() == ItemCategoryAmmunition;
 }
 
 bool Item::isMoveable()

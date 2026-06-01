@@ -130,6 +130,7 @@ public:
     void sendTransferCoins(const std::string& recipient, int amount);
     void sendOpenTransactionHistory(int entiresPerPage);
     void sendPreyAction(int slot, int actionType, int index);
+    void sendPreyHuntingAction(int slot, int actionType, bool upgrade, int raceId);
     void sendPreyRequest();
     void sendProcesses();
     void sendDlls();

@@ -30,6 +30,7 @@ end
 function ImbuementScroll:shutdown()
     self.window = nil
     self.confirmWindow = nil
+    self.lastselectedwidget = nil
     self.availableImbuements = {}
     self.needItems = {}
 end
@@ -57,6 +58,7 @@ function ImbuementScroll.selectBaseType(selectedButtonId)
     end
 
     local imbuementsList = self.window:recursiveGetChildById("imbuementsList")
+    self.lastselectedwidget = nil
     imbuementsList:destroyChildren()
 
     local imbuementsDetails = self.window:recursiveGetChildById("imbuementsDetails")
@@ -65,7 +67,14 @@ function ImbuementScroll.selectBaseType(selectedButtonId)
     local selected = false
 
     for id, imbuement in ipairs(self.availableImbuements) do
-        if imbuement.type == baseImbuement then
+        local imbuementType = imbuement.type
+        if imbuementType == nil and imbuement.group then
+            if imbuement.group == 'Basic' then imbuementType = 0
+            elseif imbuement.group == 'Intricate' then imbuementType = 1
+            elseif imbuement.group == 'Powerful' then imbuementType = 2
+            end
+        end
+        if imbuementType == baseImbuement then
             local widget = g_ui.createWidget("SlotImbuing", imbuementsList)
             widget:setId(tostring(id))
             widget.resource:setImageSource("/images/game/imbuing/imbuement-icons-64")
@@ -114,8 +123,9 @@ function ImbuementScroll.selectImbuementWidget(widget, imbuement)
                 if source then
                     itemWidget.item:setItemId(source.item:getId())
                     itemWidget:setVisible(true)
-                    itemWidget.count:setText(self.needItems[source.item:getId()] .."/" .. source.item:getCount())
-                    if self.needItems[source.item:getId()] >= source.item:getCount() then
+                    local itemCount = self.needItems[source.item:getId()] or 0
+                    itemWidget.count:setText(itemCount .."/" .. source.item:getCount())
+                    if itemCount >= source.item:getCount() then
                         itemWidget.count:setColor("$var-text-cip-color")
                     else
                         hasRequiredItems = false
@@ -125,7 +135,8 @@ function ImbuementScroll.selectImbuementWidget(widget, imbuement)
                     itemWidget.onHoverChange = function(widget, hovered)
                         local itensDetails = self.window:recursiveGetChildById("itensDetails")
                         if hovered then
-                            if self.needItems[source.item:getId()] >= source.item:getCount() then
+                            local itemCount = self.needItems[source.item:getId()] or 0
+                            if itemCount >= source.item:getCount() then
                                 itensDetails:setText(string.format("The imbuement you have selected requires %s.", source.description))
                             else
                                 itensDetails:setText(string.format("The imbuement requires %s. Unfortunately you do not own the needed amount.", source.description))
@@ -189,7 +200,7 @@ function ImbuementScroll.selectImbuementWidget(widget, imbuement)
             Imbuement.hide()
 
             local function confirm()
-                g_game.applyImbuement(0, imbuement.id)
+                g_game.applyImbuement(0, imbuement.id, false)
                 self.confirmWindow:destroy()
                 self.confirmWindow = nil
 

@@ -21,6 +21,10 @@ local registered = false
 local enterItems = {}
 local lastBrowseTier = 0
 
+local function getDepotItemKey(itemId, tier)
+  return string.format("%d:%d", itemId or 0, tier or 0)
+end
+
 local function getProtocolGame()
   return g_game.getProtocolGame()
 end
@@ -88,16 +92,31 @@ local function parseMarketEnter(msg)
   local chunkCount = msg:getU16()
 
   if chunkIndex == 0 then
-    enterItems = {}
+    enterItems = {
+      depotItems = {},
+      depotTiers = {},
+      itemTotals = {}
+    }
   end
 
   for i = 1, chunkCount do
     local itemId = msg:getU16()
-    msg:getU8() -- category
-    msg:getString() -- name
+    local category = msg:getU8()
+    local name = msg:getString()
     local amount = msg:getU16()
     local tier = msg:getU8()
-    enterItems[#enterItems + 1] = { itemId, tier, amount }
+    local key = getDepotItemKey(itemId, tier)
+
+    enterItems[#enterItems + 1] = {
+      itemId,
+      tier,
+      amount,
+      category = category,
+      name = name
+    }
+    enterItems.depotItems[key] = (enterItems.depotItems[key] or 0) + amount
+    enterItems.depotTiers[key] = tier
+    enterItems.itemTotals[itemId] = (enterItems.itemTotals[itemId] or 0) + amount
   end
 
   local player = g_game.getLocalPlayer()

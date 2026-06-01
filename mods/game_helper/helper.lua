@@ -2305,7 +2305,7 @@ local function sortMagicShooterByPriority(list)
   local player = g_game.getLocalPlayer()
   if not player then return list end
 
-  local harmonyCount = player:getHarmony()
+  local harmonyCount = player.getHarmony and player:getHarmony() or 0
   if harmonyCount >= 5 then
     local spenderIndex = nil
     for i, item in ipairs(list) do
@@ -2430,7 +2430,7 @@ function checkMagicShooter()
   unifiedList = sortMagicShooterByPriority(unifiedList)
 
   local percentageMana = (player:getMana() / player:getMaxMana()) * 100
-  local harmonyCount = player:getHarmony()
+  local harmonyCount = player.getHarmony and player:getHarmony() or 0
 
   for _, entry in ipairs(unifiedList) do
     if autoTargetOnHold then

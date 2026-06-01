@@ -1162,7 +1162,7 @@ function updatePreyWidget(slot, state)
 	end
 
 	local panel = huntingSlots[slot + 1]
-	if state == PREY_HUNTING_STATE_ACTIVE then
+	if state == PREY_HUNTING_STATE_ACTIVE or state == PREY_HUNTING_STATE_REDEEM then
 		local creatureWidget = panel.active:recursiveGetChildById('creature')
 		local counter = panel.active:recursiveGetChildById('killCounter')
 		local preyName = string.capitalize(panel.active.monsterName)

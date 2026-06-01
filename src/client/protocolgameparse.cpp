@@ -22,6 +22,8 @@
 
 #include "protocolgame.h"
 
+#include <algorithm>
+#include <functional>
 #include <map>
 #include <tuple>
 #include <vector>
@@ -1882,17 +1884,21 @@ void ProtocolGame::parsePreyPrices(const InputMessagePtr& msg)
 {
     int price = msg->getU32();
     int wildcard = -1, directly = -1;
+    int huntingRerollPrice = -1, huntingRemovePrice = -1, huntingWildcardSelectPrice = -1, huntingRerollWildcardPrice = -1;
     if (g_game.getFeature(Otc::GameTibia12Protocol)) {
         wildcard = msg->getU8();
         directly = msg->getU8();
         if (g_game.getProtocolVersion() >= 1230) {
-            msg->getU32();
-            msg->getU32();
-            msg->getU8();
-            msg->getU8();
+            huntingRerollPrice = msg->getU32();
+            huntingRemovePrice = msg->getU32();
+            huntingWildcardSelectPrice = msg->getU8();
+            huntingRerollWildcardPrice = msg->getU8();
         }
     }
     g_lua.callGlobalField("g_game", "onPreyPrice", price, wildcard, directly);
+    if (huntingRerollPrice >= 0) {
+        g_lua.callGlobalField("g_game", "onPreyHuntingPrice", huntingRerollPrice, huntingRemovePrice, huntingWildcardSelectPrice, huntingRerollWildcardPrice);
+    }
 }
 
 void ProtocolGame::parseStoreOfferDescription(const InputMessagePtr& msg)
@@ -3125,8 +3131,41 @@ void ProtocolGame::parseImbuementWindow(const InputMessagePtr& msg)
         }
         case Otc::IMBUEMENT_WINDOW_SELECT_ITEM: {
             const uint16_t itemId = msg->getU16();
-            const std::string& itemName = msg->getString();
-            const uint8_t tier = msg->getU8();
+            const ItemPtr item = Item::create(itemId);
+            std::string itemName = item ? item->getName() : std::string();
+            uint8_t tier = 0;
+
+            const int itemMetaPos = msg->getReadPos();
+            bool readItemNameFromPacket = false;
+            if (msg->getUnreadSize() >= 2) {
+                const uint16_t itemNameLength = msg->peekU16();
+                if (itemNameLength >= 3 && itemNameLength <= 80 && msg->getUnreadSize() >= itemNameLength + 4) {
+                    const std::string candidateName = msg->getString();
+                    bool printableName = true;
+                    for (const unsigned char ch : candidateName) {
+                        if (ch < 32 || ch == 127) {
+                            printableName = false;
+                            break;
+                        }
+                    }
+
+                    if (printableName) {
+                        itemName = candidateName;
+                        tier = msg->getU8();
+                        readItemNameFromPacket = true;
+                    } else {
+                        msg->setReadPos(itemMetaPos);
+                    }
+                }
+            }
+
+            if (!readItemNameFromPacket) {
+                const bool hasUpgradeClassification = item && item->rawGetThingType() && item->rawGetThingType()->getClassification() > 0;
+                if (hasUpgradeClassification && msg->getUnreadSize() > 1) {
+                    tier = msg->getU8();
+                }
+            }
+
             const uint8_t slots = msg->getU8();
             std::map<int, std::tuple<Imbuement, int, int>> activeSlots;
             for (int i = 0; i < slots; ++i) {
@@ -3352,28 +3391,65 @@ void ProtocolGame::parseTournamentLeaderboard(const InputMessagePtr& msg)
 
 void ProtocolGame::parseKillTracker(const InputMessagePtr& msg)
 {
-    msg->getString();
-    msg->getU16();
-    msg->getU8();
-    msg->getU8();
-    msg->getU8();
-    msg->getU8();
-    msg->getU8();
-    int corpseSize = msg->getU8(); // corpse size
-    for (int i = 0; i < corpseSize; i++) {
-        getItem(msg); // corpse item    
-    }
+    const std::string& monsterName = msg->getString();
+    const Outfit& monsterOutfit = getOutfit(msg, false);
+
+    ItemVector dropItems;
+
+    std::function<void(int)> parseContainer = [&](int depth) {
+        if (depth > 4) {
+            msg->getU8();
+            return;
+        }
+
+        const uint8_t itemCount = msg->getU8();
+        for (uint8_t i = 0; i < itemCount; ++i) {
+            const uint16_t itemId = msg->getU16();
+            ItemPtr item = Item::create(itemId);
+
+            if (item && item->isThingTypeContainer()) {
+                parseContainer(depth + 1);
+                dropItems.push_back(item);
+                continue;
+            }
+
+            const uint8_t count = msg->getU8();
+            msg->getU16(); // worth
+            msg->getString(); // item name
+
+            if (item && item->getId() != 0) {
+                item->setCount(std::max<int>(1, count));
+                dropItems.push_back(item);
+            }
+        }
+    };
+
+    parseContainer(1);
+    g_lua.callGlobalField("g_game", "onKillTracker", monsterName, monsterOutfit, dropItems);
 }
 
 void ProtocolGame::parseSupplyTracker(const InputMessagePtr& msg)
 {
-    msg->getU16();
+    const uint16_t itemId = msg->getU16();
+    g_lua.callGlobalField("g_game", "onSupplyTracker", itemId);
 }
 
 void ProtocolGame::parseImpactTracker(const InputMessagePtr& msg)
 {
-    msg->getU8();
-    msg->getU32();
+    const uint8_t analyzerType = msg->getU8();
+    const uint32_t amount = msg->getU32();
+
+    uint8_t effect = 0;
+    std::string target;
+
+    if (analyzerType == 1) {
+        effect = msg->getU8();
+    } else if (analyzerType == 2) {
+        effect = msg->getU8();
+        target = msg->getString();
+    }
+
+    g_lua.callGlobalField("g_game", "onImpactTracker", analyzerType, amount, effect, target);
 }
 
 void ProtocolGame::parseItemsPrices(const InputMessagePtr& msg)
@@ -3387,16 +3463,26 @@ void ProtocolGame::parseItemsPrices(const InputMessagePtr& msg)
 
 void ProtocolGame::parseLootTracker(const InputMessagePtr& msg)
 {
-    msg->getU8();
-    if (g_game.getFeature(Otc::GameTibia12Protocol) && g_game.getProtocolVersion() >= 1220) {
-        msg->getU8();
+    if (!g_game.getFeature(Otc::GameTibia12Protocol)) {
+        const uint16_t itemId = msg->getU16();
+        ItemPtr item = Item::create(itemId);
+        if (item && (item->isStackable() || item->isFluidContainer() || item->isSplash())) {
+            item->setCountOrSubType(g_game.getFeature(Otc::GameCountU16) ? msg->getU16() : msg->getU8());
+        }
+        const std::string& itemName = msg->getString();
+        g_lua.callGlobalField("g_game", "onLootStats", item, itemName);
+        return;
     }
+
+    msg->getU8();
+    if (g_game.getProtocolVersion() >= 1220)
+        msg->getU8();
     msg->getU8();
     msg->getString();
     getItem(msg);
     msg->getU8();
 
-    uint8_t count = msg->getU8();
+    const uint8_t count = msg->getU8();
     for (uint8_t i = 0; i < count; ++i) {
         msg->getString();
         msg->getString();
@@ -3411,7 +3497,49 @@ void ProtocolGame::parseItemDetail(const InputMessagePtr& msg)
 
 void ProtocolGame::parseHunting(const InputMessagePtr& msg)
 {
+    const uint8_t slot = msg->getU8();
+    const uint8_t state = msg->getU8();
 
+    uint8_t lockType = 0;
+    std::map<int, bool> creatureList;
+    uint16_t selectedRaceId = 0;
+    bool upgraded = false;
+    uint16_t killsRequired = 0;
+    uint16_t currentKills = 0;
+    uint8_t rarity = 0;
+
+    if (state == 0) {
+        lockType = msg->getU8();
+    } else if (state == 2 || state == 3) {
+        const uint16_t count = msg->getU16();
+        for (uint16_t i = 0; i < count; ++i) {
+            const uint16_t raceId = msg->getU16();
+            creatureList[raceId] = msg->getU8() != 0;
+        }
+    } else if (state == 4 || state == 5) {
+        selectedRaceId = msg->getU16();
+        upgraded = msg->getU8() != 0;
+        killsRequired = msg->getU16();
+        currentKills = msg->getU16();
+        rarity = msg->getU8();
+    }
+
+    const uint32_t timeUntilFreeReroll = msg->getU32();
+    g_lua.callGlobalField("g_game", "onUpdateRerrolTime", slot, timeUntilFreeReroll);
+
+    if (state == 0) {
+        g_lua.callGlobalField("g_game", "onHuntingLockedState", slot, lockType, state);
+    } else if (state == 1) {
+        g_lua.callGlobalField("g_game", "onHuntingExhaustedState", slot, state);
+    } else if (state == 2) {
+        g_lua.callGlobalField("g_game", "onHuntingSelectState", slot, creatureList, state);
+    } else if (state == 3) {
+        g_lua.callGlobalField("g_game", "onHuntingWildcardState", slot, creatureList, state);
+    } else if (state == 4 || state == 5) {
+        g_lua.callGlobalField("g_game", "onHuntingActiveState", slot, selectedRaceId, upgraded, killsRequired, currentKills, rarity, state);
+    } else {
+        g_logger.error(stdext::format("Unknown hunting task state: %i", (int)state));
+    }
 }
 
 void ProtocolGame::parseExtendedOpcode(const InputMessagePtr& msg)

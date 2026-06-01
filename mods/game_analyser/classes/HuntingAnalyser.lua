@@ -25,6 +25,13 @@ local valueInSeconds = function(t)
     return math.ceil(d/((now-time)/1000))
 end
 
+local function compactNumber(value)
+	if type(tokformat) == 'function' then
+		return tokformat(value)
+	end
+	return value
+end
+
 if not HuntingAnalyser then
 	HuntingAnalyser = {
 		launchTime = 0,
@@ -182,7 +189,7 @@ function HuntingAnalyser:updateWindow(ignoreVisible)
 	local experience = HuntingAnalyser.xpGain
 	if not contentsPanel.xpGain.lastExperience or contentsPanel.xpGain.lastExperience ~= experience then
 		if experience > 1000000 then
-			contentsPanel.xpGain:setText(formatMoney(tokformat(experience), ","))
+			contentsPanel.xpGain:setText(formatMoney(compactNumber(experience), ","))
 		else
 			contentsPanel.xpGain:setText(formatMoney(experience, ","))
 		end
@@ -199,7 +206,7 @@ function HuntingAnalyser:updateWindow(ignoreVisible)
 
 	if not contentsPanel.xpHour.lastValue or contentsPanel.xpHour.lastValue ~= HuntingAnalyser.xpHour then
 		if HuntingAnalyser.xpHour > 10000000 then
-			contentsPanel.xpHour:setText(formatMoney(tokformat(HuntingAnalyser.xpHour), ","))
+			contentsPanel.xpHour:setText(formatMoney(compactNumber(HuntingAnalyser.xpHour), ","))
 		else
 			contentsPanel.xpHour:setText(formatMoney(HuntingAnalyser.xpHour, ","))
 		end
@@ -211,7 +218,7 @@ function HuntingAnalyser:updateWindow(ignoreVisible)
 
 	if not contentsPanel.rawXpGain.lastValue or contentsPanel.rawXpGain.lastValue ~= rawExperience then
 		if rawExperience > 10000000 then
-			contentsPanel.rawXpGain:setText(formatMoney(tokformat(rawExperience), ","))
+			contentsPanel.rawXpGain:setText(formatMoney(compactNumber(rawExperience), ","))
 		else
 			contentsPanel.rawXpGain:setText(formatMoney(rawExperience, ","))
 		end
@@ -220,7 +227,7 @@ function HuntingAnalyser:updateWindow(ignoreVisible)
 
 	if not contentsPanel.rawXpHour.lastValue or contentsPanel.rawXpHour.lastValue ~= HuntingAnalyser.rawXpHour then
 		if HuntingAnalyser.rawXpHour > 10000000 then
-			contentsPanel.rawXpHour:setText(formatMoney(tokformat(HuntingAnalyser.rawXpHour), ","))
+			contentsPanel.rawXpHour:setText(formatMoney(compactNumber(HuntingAnalyser.rawXpHour), ","))
 		else
 			contentsPanel.rawXpHour:setText(formatMoney(HuntingAnalyser.rawXpHour, ","))
 		end
@@ -230,7 +237,7 @@ function HuntingAnalyser:updateWindow(ignoreVisible)
 	-- supplies
 	if not contentsPanel.loot.lastValue or contentsPanel.loot.lastValue ~= HuntingAnalyser.loot then
 		if HuntingAnalyser.loot > 1000000 then
-			contentsPanel.loot:setText(formatMoney(tokformat(HuntingAnalyser.loot), ","))
+			contentsPanel.loot:setText(formatMoney(compactNumber(HuntingAnalyser.loot), ","))
 		else
 			contentsPanel.loot:setText(formatMoney(HuntingAnalyser.loot, ","))
 		end
@@ -239,7 +246,7 @@ function HuntingAnalyser:updateWindow(ignoreVisible)
 
 	if not contentsPanel.supplies.lastValue or contentsPanel.supplies.lastValue ~= HuntingAnalyser.supplies then
 		if HuntingAnalyser.supplies > 1000000 then
-			contentsPanel.supplies:setText(formatMoney(tokformat(HuntingAnalyser.supplies), ","))
+			contentsPanel.supplies:setText(formatMoney(compactNumber(HuntingAnalyser.supplies), ","))
 		else
 			contentsPanel.supplies:setText(formatMoney(HuntingAnalyser.supplies, ","))
 		end
@@ -249,7 +256,7 @@ function HuntingAnalyser:updateWindow(ignoreVisible)
 	HuntingAnalyser:checkBalance()
 	if not contentsPanel.balance.lastValue or contentsPanel.balance.lastValue ~= HuntingAnalyser.balance then
 		if HuntingAnalyser.balance > 1000000 then
-			contentsPanel.balance:setText(formatMoney(tokformat(HuntingAnalyser.balance), ","))
+			contentsPanel.balance:setText(formatMoney(compactNumber(HuntingAnalyser.balance), ","))
 		else
 			contentsPanel.balance:setText(comma_value(HuntingAnalyser.balance))
 		end
@@ -261,7 +268,7 @@ function HuntingAnalyser:updateWindow(ignoreVisible)
 
 	if not contentsPanel.damage.lastValue or contentsPanel.damage.lastValue ~= HuntingAnalyser.damage then
 		if HuntingAnalyser.damage > 1000000 then
-			contentsPanel.damage:setText(formatMoney(tokformat(HuntingAnalyser.damage), ","))
+			contentsPanel.damage:setText(formatMoney(compactNumber(HuntingAnalyser.damage), ","))
 		else
 			contentsPanel.damage:setText(formatMoney(HuntingAnalyser.damage, ","))
 		end
@@ -272,7 +279,7 @@ function HuntingAnalyser:updateWindow(ignoreVisible)
 	if not contentsPanel.damageHour.lastValue or contentsPanel.damageHour.lastValue ~= currentDamagePerHour then
 		HuntingAnalyser.damageHour = currentDamagePerHour
 		if HuntingAnalyser.damageHour > 1000000 then
-			contentsPanel.damageHour:setText(formatMoney(tokformat(HuntingAnalyser.damageHour), ","))
+			contentsPanel.damageHour:setText(formatMoney(compactNumber(HuntingAnalyser.damageHour), ","))
 		else
 			contentsPanel.damageHour:setText(formatMoney(HuntingAnalyser.damageHour, ","))
 		end
@@ -281,7 +288,7 @@ function HuntingAnalyser:updateWindow(ignoreVisible)
 
 	if not contentsPanel.healing.lastValue or contentsPanel.healing.lastValue ~= HuntingAnalyser.healing then
 		if HuntingAnalyser.healing > 1000000 then
-			contentsPanel.healing:setText(formatMoney(tokformat(HuntingAnalyser.healing), ","))
+			contentsPanel.healing:setText(formatMoney(compactNumber(HuntingAnalyser.healing), ","))
 		else
 			contentsPanel.healing:setText(formatMoney(HuntingAnalyser.healing, ","))
 		end
@@ -296,7 +303,7 @@ function HuntingAnalyser:updateWindow(ignoreVisible)
 
 	if not contentsPanel.healHour.lastValue or contentsPanel.healHour.lastValue ~= HuntingAnalyser.healingHour then
 		if HuntingAnalyser.healingHour > 1000000 then
-			contentsPanel.healHour:setText(formatMoney(tokformat(HuntingAnalyser.healingHour), ","))
+			contentsPanel.healHour:setText(formatMoney(compactNumber(HuntingAnalyser.healingHour), ","))
 		else
 			contentsPanel.healHour:setText(formatMoney(HuntingAnalyser.healingHour, ","))
 		end

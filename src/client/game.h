@@ -46,13 +46,13 @@ struct UnjustifiedPoints {
             killsMonthRemaining == other.killsMonthRemaining &&
             skullTime == other.skullTime;
     }
-    uint8 killsDay;
-    uint8 killsDayRemaining;
-    uint8 killsWeek;
-    uint8 killsWeekRemaining;
-    uint8 killsMonth;
-    uint8 killsMonthRemaining;
-    uint32 skullTime;
+    uint8 killsDay = 0;
+    uint8 killsDayRemaining = 0;
+    uint8 killsWeek = 0;
+    uint8 killsWeekRemaining = 0;
+    uint8 killsMonth = 0;
+    uint8 killsMonthRemaining = 0;
+    uint32 skullTime = 0;
 };
 
 typedef std::tuple<std::string, uint, std::string, int, bool> Vip;
@@ -312,6 +312,7 @@ public:
 
     // >= 1100
     void preyAction(int slot, int actionType, int index);
+    void preyHuntingAction(int slot, int actionType, bool upgrade, int raceId);
     void preyRequest();
     void openWheel(uint32_t playerId);
     void sendApplyWheelPoints(const std::vector<uint16_t>& slotPoints, uint16_t greenGem, uint16_t redGem, uint16_t aquaGem, uint16_t purpleGem);

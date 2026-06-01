@@ -1212,6 +1212,17 @@ void ProtocolGame::sendPreyAction(int slot, int actionType, int index)
     send(msg);
 }
 
+void ProtocolGame::sendPreyHuntingAction(int slot, int actionType, bool upgrade, int raceId)
+{
+    auto msg = std::make_shared<OutputMessage>();
+    msg->addU8(Proto::ClientPreyHuntingAction);
+    msg->addU8(slot);
+    msg->addU8(actionType);
+    msg->addU8(upgrade ? 1 : 0);
+    msg->addU16(raceId);
+    send(msg);
+}
+
 void ProtocolGame::sendPreyRequest()
 {
     auto msg = std::make_shared<OutputMessage>();

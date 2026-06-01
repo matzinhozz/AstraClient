@@ -64,6 +64,10 @@ local sortButtons = {
 local enableCategories = { 17, 18, 19, 20, 21, 27, 32 }
 local enableClassification = {1, 3, 7, 8, 15, 17, 18, 19, 20, 21, 24, 27, 32 }
 
+local function getDepotItemKey(itemId, tier)
+	return string.format("%d:%d", itemId or 0, tier or 0)
+end
+
 function init()
   marketWindow = g_ui.displayUI('t_market')
   mainMarket = marketWindow.contentPanel.mainMarket
@@ -252,14 +256,23 @@ function myOffersButton(widget)
 end
 
 function getDepotItemCount(itemId, tier)
+	tier = tier or 0
+
+	if depotLockerItems and depotLockerItems.depotItems then
+		local count = depotLockerItems.depotItems[getDepotItemKey(itemId, tier)]
+		if count then
+			return count
+		end
+	end
+
 	for _, data in pairs(depotLockerItems) do
-		if data[1] == itemId and data[2] == tier then
-			return data[3]
+		if type(data) == "table" and data[1] == itemId and (data[2] or 0) == tier then
+			return data[3] or 0
 		end
 	end
 
 	if itemId == 22118 then
-		return g_game.getTransferableTibiaCoins()
+		return g_game.getTransferableTibiaCoins and g_game.getTransferableTibiaCoins() or 0
 	end
 
 	return 0
@@ -749,13 +762,13 @@ function onItemListValueChange(scroll, value, delta)
 
 		widget.name:setTooltip('')
 		widget.name:setText(data.marketData.name)
-		if widget.name:isOfflimit() then
+		if widget.name.isOfflimit and widget.name:isOfflimit() then
 			widget.name:setText(short_text(data.marketData.name, 15))
 			widget.name:setTooltip(data.marketData.name)
 		end
 
 		widget.item:getItem():setCount(count)
-		widget.item:setActionId(i)
+		widget.item:setActionId(index)
 		widget.item:setTooltip(tr("%s%s%s%s", comma_value(count), "x", (count > 65000 and "+ " or " "), data.marketData.name))
 		widget.item:setTier(data.tier and data.tier or tier)
 
@@ -860,7 +873,7 @@ function onSelectChildCategory(widget, selected, keepFilter)
 		widget.item:setItemId(itemInfo.thingType:getId())
 
 		widget.name:setText(itemInfo.marketData.name)
-		if widget.name:isOfflimit() then
+		if widget.name.isOfflimit and widget.name:isOfflimit() then
 			widget.name:setText(short_text(itemInfo.marketData.name, 15))
 			widget.name:setTooltip(itemInfo.marketData.name)
 		end
@@ -908,8 +921,10 @@ function onUpdateChildItem(itemID, tier)
 			local count = itemID == 22118 and g_game.getTransferableTibiaCoins() or getDepotItemCount(itemID, tier)
 
 			if lastSelectedCategory then
-				local itemInfo = marketItems[lastSelectedCategory:getActionId()][widget.item:getActionId()]
-				widget.item:setTooltip(tr("%s%s%s%s", comma_value(count), "x", (count > 65000 and "+ " or " "), itemInfo.marketData.name))
+				local itemInfo = cache.SCROLL_MARKET_ITEMS.listData[widget.item:getActionId()]
+				if itemInfo and itemInfo.marketData then
+					widget.item:setTooltip(tr("%s%s%s%s", comma_value(count), "x", (count > 65000 and "+ " or " "), itemInfo.marketData.name))
+				end
 			end
 
 			widget.item:getItem():setCount(count == 0 and 0 or count)
@@ -1511,7 +1526,7 @@ function onSearchItem(textField)
 		widget.item:setItemId(itemInfo.thingType:getId())
 
 		widget.name:setText(itemInfo.marketData.name)
-		if widget.name:isOfflimit() then
+		if widget.name.isOfflimit and widget.name:isOfflimit() then
 			widget.name:setText(short_text(itemInfo.marketData.name, 15))
 			widget.name:setTooltip(itemInfo.marketData.name)
 		end
@@ -1637,7 +1652,7 @@ function onShowRedirect(item)
 		widget.item:setItemId(itemInfo.thingType:getId())
 
 		widget.name:setText(itemInfo.marketData.name)
-		if widget.name:isOfflimit() then
+		if widget.name.isOfflimit and widget.name:isOfflimit() then
 			widget.name:setText(short_text(itemInfo.marketData.name, 15))
 			widget.name:setTooltip(itemInfo.marketData.name)
 		end

@@ -346,7 +346,7 @@ local function insertWidget(itemInfo, itemList)
     local widget = g_ui.createWidget("MarketItemList", itemList)
     widget.item:setItemId(itemInfo.thingType:getId())
     widget.name:setText(itemInfo.marketData.name)
-    if widget.name:isOfflimit() then
+    if widget.name.isOfflimit and widget.name:isOfflimit() then
         widget.name:setText(short_text(itemInfo.marketData.name, 15))
         widget.name:setTooltip(itemInfo.marketData.name)
     end
@@ -507,7 +507,7 @@ local function updateWidgets(widget, value, startItem, i, titemList, itemListSor
 
     if widget.name then
         widget.name:setText(itemInfo.marketData.name)
-        if widget.name:isOfflimit() then
+        if widget.name.isOfflimit and widget.name:isOfflimit() then
             widget.name:setText(short_text(itemInfo.marketData.name, 15))
             widget.name:setTooltip(itemInfo.marketData.name)
         end

@@ -30,6 +30,12 @@ ForgeSystem.transferData = {}
 ForgeSystem.transferConvergenceData = {}
 ForgeSystem.maxPlayerDust = 100
 
+local function getClassPrice(classification, tier)
+	local classPrices = ForgeSystem.classPrice[classification]
+	local fusionPrices = classPrices and classPrices[2]
+	return (fusionPrices and fusionPrices[tier]) or 0
+end
+
 function ForgeSystem.init(classPrice, transferMap, fusionPrices, transferPrices, baseMultipier, slivers, totalSlivers, dustCost, dustPrice, maxDust, dustFusion, convergenceDustFusion, dustTransfer, convergenceDustTransfer, success, improveRateSuccess, tierLoss)
 	ForgeSystem.classPrice = classPrice
 	ForgeSystem.transferMap = transferMap
@@ -316,7 +322,7 @@ local function ConfigureFusionPanel(selectedWidget)
 	fusionMenu.itemsFusion.fusionButton.itemTo.tierflags:setVisible(true)
 
 	local classification = itemPtr:getClassification()
-	local price = ForgeSystem.classPrice[classification][2][itemTier]
+	local price = getClassPrice(classification, itemTier)
 
 	ForgeSystem.fusionPrice = price
 	local messageColor = {}
@@ -753,7 +759,7 @@ local function ConfigureTransferPanel(selectedWidget)
 	transferMenu.itemsFusion.transferButton.item.tierflags:setImageClip( (itemTier - 1) * 9 .." 0 9 8")
 
 	local classification = itemPtr:getClassification()
-	local price = ForgeSystem.classPrice[classification][2][itemTier - 1]
+	local price = getClassPrice(classification, itemTier - 1)
 	ForgeSystem.fusionPrice = price
 
 	local messageColor = {}

@@ -41,6 +41,7 @@ function Imbuement.init()
     onGameStart = self.offline,
     onGameEnd = self.offline,
     onOpenImbuementWindow = self.onOpenImbuementWindow,
+    onImbuementWindow = self.onImbuementWindow,
     onImbuementItem = self.onImbuementItem,
     onImbuementScroll = self.onImbuementScroll,
     onResourceBalance = self.onResourceBalance,
@@ -54,6 +55,7 @@ function Imbuement.terminate()
     onGameStart = self.offline,
     onGameEnd = self.offline,
     onOpenImbuementWindow = self.onOpenImbuementWindow,
+    onImbuementWindow = self.onImbuementWindow,
     onImbuementItem = self.onImbuementItem,
     onImbuementScroll = self.onImbuementScroll,
     onResourceBalance = self.onResourceBalance,
@@ -170,14 +172,30 @@ function Imbuement.onOpenImbuementWindow()
   self:toggleMenu("selectItemOrScroll")
 end
 
-function Imbuement.onImbuementItem(itemId, tier, slots, activeSlots, availableImbuements, needItems)
+local function buildNeedItemsTable(needItems)
+  local needItemsTable = {}
+  for _, item in ipairs(needItems or {}) do
+    if item and item.getId then
+      needItemsTable[item:getId()] = item:getCount() or 0
+    end
+  end
+  return needItemsTable
+end
+
+function Imbuement.onImbuementWindow(itemId, slots, activeSlots, availableImbuements, needItems)
+  Imbuement.onImbuementItem(itemId, 0, slots, activeSlots, availableImbuements, needItems)
+end
+
+function Imbuement.onImbuementItem(itemId, tier, slots, activeSlots, availableImbuements, needItems, itemName)
+  self:show()
   self:toggleMenu("selectImbue")
-  ImbuementItem.setup(itemId, tier, slots, activeSlots, availableImbuements, needItems)
+  ImbuementItem.setup(itemId, tier, slots, activeSlots, availableImbuements, buildNeedItemsTable(needItems), itemName)
 end
 
 function Imbuement.onImbuementScroll(availableImbuements, needItems)
+  self:show()
   self:toggleMenu("scrollImbue")
-  ImbuementScroll.setup(availableImbuements, needItems)
+  ImbuementScroll.setup(availableImbuements, buildNeedItemsTable(needItems))
 end
 
 function Imbuement.onSelectItem()

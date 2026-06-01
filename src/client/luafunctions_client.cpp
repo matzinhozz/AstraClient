@@ -344,6 +344,7 @@ void Client::registerLuaFunctions()
     g_lua.bindSingletonFunction("g_game", "transferCoins", &Game::transferCoins, &g_game);
     g_lua.bindSingletonFunction("g_game", "openTransactionHistory", &Game::openTransactionHistory, &g_game);
     g_lua.bindSingletonFunction("g_game", "preyAction", &Game::preyAction, &g_game);
+    g_lua.bindSingletonFunction("g_game", "preyHuntingAction", &Game::preyHuntingAction, &g_game);
     g_lua.bindSingletonFunction("g_game", "preyRequest", &Game::preyRequest, &g_game);
     g_lua.bindSingletonFunction("g_game", "openWheel", &Game::openWheel, &g_game);
     g_lua.bindSingletonFunction("g_game", "sendOpenDestinyWheel", &Game::openWheel, &g_game);
@@ -741,6 +742,7 @@ void Client::registerLuaFunctions()
     g_lua.bindClassMemberFunction<Item>("setQuickLootFlags", &Item::setQuickLootFlags);
     g_lua.bindClassMemberFunction<Item>("getObtainFlags", &Item::getObtainFlags);
     g_lua.bindClassMemberFunction<Item>("setObtainFlags", &Item::setObtainFlags);
+    g_lua.bindClassMemberFunction<Item>("isAmmo", &Item::isAmmo);
     g_lua.bindClassMemberFunction<Item>("getWeaponType", &Item::getWeaponType);
     g_lua.bindClassMemberFunction<Item>("getClassification", &Item::getClassification);
     g_lua.bindClassMemberFunction<Item>("setShader", &Item::setShader);
