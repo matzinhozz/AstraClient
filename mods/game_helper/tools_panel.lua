@@ -113,19 +113,19 @@ local function getHelperWindow()
 end
 
 -- Get player vocation ID (normalized to base vocation)
--- Client IDs: Knight=1, Paladin=2, Sorcerer=3, Druid=4, Monk=5
--- Promoted: EliteKnight=11, RoyalPaladin=12, MasterSorcerer=13, ElderDruid=14, ExaltedMonk=15
+-- Game client IDs: Sorcerer=1, Druid=2, Paladin=3, Knight=4, Monk=9
+-- Promoted: MasterSorcerer=5/13, ElderDruid=6/14, RoyalPaladin=7/12, EliteKnight=8/11, ExaltedMonk=10/15
 -- Returns normalized ID: Knight=1, Paladin=2, Sorcerer=3, Druid=4, Monk=5
 local function getPlayerVocationId()
   local player = getPlayer()
   if not player then return 0 end
   local voc = player:getVocation()
   -- Normalize to base vocation (remove promotion)
-  if voc == 1 or voc == 11 then return 1 end -- Knight / Elite Knight
-  if voc == 2 or voc == 12 then return 2 end -- Paladin / Royal Paladin
-  if voc == 3 or voc == 13 then return 3 end -- Sorcerer / Master Sorcerer
-  if voc == 4 or voc == 14 then return 4 end -- Druid / Elder Druid
-  if voc == 5 or voc == 15 then return 5 end -- Monk / Exalted Monk
+  if voc == 4 or voc == 8 or voc == 11 then return 1 end -- Knight / Elite Knight
+  if voc == 3 or voc == 7 or voc == 12 then return 2 end -- Paladin / Royal Paladin
+  if voc == 1 or voc == 5 or voc == 13 then return 3 end -- Sorcerer / Master Sorcerer
+  if voc == 2 or voc == 6 or voc == 14 then return 4 end -- Druid / Elder Druid
+  if voc == 9 or voc == 10 or voc == 15 then return 5 end -- Monk / Exalted Monk
   return voc
 end
 
