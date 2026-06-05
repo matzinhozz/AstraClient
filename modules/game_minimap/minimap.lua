@@ -24,6 +24,17 @@ local keybindZoomOut = KeyBind:getKeyBind("Minimap", "Zoom Out")
 local keybindCenter = KeyBind:getKeyBind("Minimap", "Center")
 local keybindShowMinimap = KeyBind:getKeyBind("Minimap", "Show")
 
+local function syncSideButton(state, retries)
+  retries = retries or 8
+  if modules.game_sidebuttons and modules.game_sidebuttons.setButtonVisible then
+    modules.game_sidebuttons.setButtonVisible("lenshelpFunction", state)
+    return
+  end
+
+  if retries > 0 then
+    scheduleEvent(function() syncSideButton(state, retries - 1) end, 250)
+  end
+end
 
 function init()
   minimapWindow = g_ui.loadUI('minimap', m_interface.getRightPanel())
@@ -50,7 +61,7 @@ function init()
 
 
   minimapWindow:setup()
-  minimapWindow:close()
+  open()
   if minimapWindow.iconResize then
     minimapWindow:getChildById('iconResize'):hide()
   end
@@ -111,7 +122,7 @@ function toggle()
   if minimapWindow:isVisible() then
     minimapWindow:close()
     minimapButton:setOn(false)
-    modules.game_sidebuttons.setButtonVisible("lenshelpFunction", false)
+    syncSideButton(false)
     if sideButton then
       sideButton.highlight:setVisible(true)
     end
@@ -123,8 +134,27 @@ function toggle()
       end
     end
     minimapButton:setOn(true)
-    modules.game_sidebuttons.setButtonVisible("lenshelpFunction", true)
+    syncSideButton(true)
   end
+end
+
+function open()
+  if not minimapWindow then
+    return
+  end
+
+  m_interface.addToPanels(minimapWindow)
+  minimapWindow:open()
+
+  if minimapButton then
+    minimapButton:setOn(true)
+  end
+
+  syncSideButton(true)
+end
+
+function isOpen()
+  return minimapWindow and minimapWindow:isVisible()
 end
 
 function preload()
@@ -302,7 +332,7 @@ function move(panel, height, index)
   end
 
   minimapWindow:open()
-  modules.game_sidebuttons.setButtonVisible("lenshelpFunction", true)
+  syncSideButton(true)
 
   return minimapWindow
 end

@@ -1,6 +1,7 @@
 filename = nil
 loaded = false
 loading = false
+lastError = nil
 
 function setFileName(name)
   filename = name
@@ -12,6 +13,14 @@ end
 
 function isLoading()
   return loading
+end
+
+function getLoadError()
+  return lastError
+end
+
+function getMissing860Message()
+  return tr('Voce precisa colocar os arquivos do Tibia 8.60 em data/things/860 (Tibia.dat e Tibia.spr).')
 end
 
 local function getVersionFromPath(datPath)
@@ -45,6 +54,7 @@ function load()
   end
 
   loading = true
+  lastError = nil
   local version = g_game.getClientVersion()
   local things = g_settings.getNode('things')
   
@@ -104,6 +114,7 @@ function load()
 
   if errorMessage:len() > 0 then
     local loadError = errorMessage:gsub('%s+$', '')
+    lastError = loadError .. '\n\n' .. getMissing860Message()
     g_logger.error(loadError)
 
     g_game.setClientVersion(0)

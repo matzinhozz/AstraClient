@@ -1081,13 +1081,30 @@ function onBTCHelperClick()
   toggle()
 end
 
+local function getBTCHelperPanel()
+  local gameInterface = modules.game_interface or m_interface
+  if not gameInterface then
+    return nil
+  end
+
+  if gameInterface.getMainRightPanel then
+    return gameInterface.getMainRightPanel()
+  end
+
+  if gameInterface.getRightPanel then
+    return gameInterface.getRightPanel()
+  end
+
+  return nil
+end
+
 function createBTCHelperWidget()
   -- Evitar criar duplicado
   if btcHelperWidget then
     return
   end
 
-  local mainRightPanel = modules.game_interface.getMainRightPanel()
+  local mainRightPanel = getBTCHelperPanel()
   if not mainRightPanel then
     return
   end
@@ -1125,7 +1142,7 @@ function repositionBTCHelperBelowMinimap()
     return
   end
 
-  local mainRightPanel = modules.game_interface.getMainRightPanel()
+  local mainRightPanel = getBTCHelperPanel()
   if not mainRightPanel then
     return
   end

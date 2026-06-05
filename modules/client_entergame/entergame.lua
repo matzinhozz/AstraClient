@@ -47,6 +47,37 @@ local function getServerInfoByName(name)
   return nil
 end
 
+local function ensureThingsLoaded()
+  local gameThings = modules.game_things
+  if not gameThings or gameThings.isLoaded() then
+    return nil
+  end
+
+  if G.clientVersion then
+    g_game.setClientVersion(G.clientVersion)
+    g_game.setStringVersion(GameInfo.strVersion)
+    g_game.setProtocolVersion(g_game.getClientProtocolVersion(G.clientVersion))
+  end
+
+  if not gameThings.isLoading() and gameThings.load then
+    gameThings.load()
+  end
+
+  if gameThings.isLoaded() then
+    return nil
+  end
+
+  if gameThings.getLoadError then
+    return gameThings.getLoadError()
+  end
+
+  if gameThings.getMissing860Message then
+    return gameThings.getMissing860Message()
+  end
+
+  return tr('Voce precisa colocar os arquivos do Tibia 8.60 em data/things/860 (Tibia.dat e Tibia.spr).')
+end
+
 local function normalizeServers()
   if not Servers then return end
 
@@ -599,6 +630,11 @@ function EnterGame.doLogin(account, password, token, host, gtoken)
     return
   end
 
+  local thingsError = ensureThingsLoaded()
+  if thingsError then
+    return EnterGame.onError(thingsError)
+  end
+
   if not rememberEmailBox:isChecked() then
     g_settings.set('account', G.account)
   end
@@ -686,9 +722,8 @@ function EnterGame.doLogin(account, password, token, host, gtoken)
     g_logger.info("Connecting to: " .. server_ip .. ":" .. server_port)
     protocolLogin:login(server_ip, server_port, G.account, G.password, G.authenticatorToken, G.stayLogged)
   else
-    loadBox:destroy()
-    loadBox = nil
-    EnterGame.show()
+    local thingsError = ensureThingsLoaded() or tr('Voce precisa colocar os arquivos do Tibia 8.60 em data/things/860 (Tibia.dat e Tibia.spr).')
+    return EnterGame.onError(thingsError)
   end
 end
 

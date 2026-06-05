@@ -58,6 +58,10 @@ function init()
   local totalLines = math.max(2, math.ceil(buttonPanel:getChildCount() / 5))
   buttonsWindow:setHeight(77 + ((totalLines - 1) * 22))
 
+  if modules.game_minimap and modules.game_minimap.isOpen and modules.game_minimap.isOpen() then
+    setButtonVisible("lenshelpFunction", true)
+  end
+
   connect(g_game, {
     onGameStart = online,
     onGameEnd = offline,
