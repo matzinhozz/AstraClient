@@ -136,16 +136,16 @@ end
 function init()
   connect(g_game, { onEnterGame = registerProtocol,
                     onPendingGame = registerProtocol,
+                    onGameStart = registerProtocol,
                     onGameEnd = unregisterProtocol })
-  if g_game.isOnline() then
-    registerProtocol()
-  end
+  registerProtocol()
 end
 
 function terminate()
   disconnect(g_game, { onEnterGame = registerProtocol,
-                    onPendingGame = registerProtocol,
-                    onGameEnd = unregisterProtocol })
+                       onPendingGame = registerProtocol,
+                       onGameStart = registerProtocol,
+                       onGameEnd = unregisterProtocol })
 
   unregisterProtocol()
 end
@@ -270,6 +270,62 @@ function registerProtocol()
     signalcall(g_game.onDailyRewardHistory, history)
   end)
 
+  registerOpcode(ServerPackets.Highscores, function(protocol, msg)
+    local status = msg:getU8()
+    if status ~= 0 then
+      signalcall(g_game.onHighscores, {}, "All Game Worlds", {[0xFFFFFFFF] = "(all)"}, 0xFFFFFFFF, {[0] = "Experience Points"}, 0, 1, 1, {}, os.time())
+      return
+    end
+
+    local worlds = {}
+    local worldCount = msg:getU8()
+    for i = 1, worldCount do
+      worlds[i] = msg:getString()
+    end
+
+    local selectedWorld = msg:getString()
+    msg:getU8() -- Game world category
+    msg:getU8() -- BattlEye world type
+
+    local vocations = {}
+    local vocationCount = msg:getU8()
+    for _ = 1, vocationCount do
+      local vocationId = msg:getU32()
+      vocations[vocationId] = msg:getString()
+    end
+
+    local selectedVocation = msg:getU32()
+    local categories = {}
+    local categoryCount = msg:getU8()
+    for _ = 1, categoryCount do
+      local categoryId = msg:getU8()
+      categories[categoryId] = msg:getString()
+    end
+
+    local selectedCategory = msg:getU8()
+    local page = msg:getU16()
+    local pages = msg:getU16()
+    local characters = {}
+    local characterCount = msg:getU8()
+    for i = 1, characterCount do
+      local rank = msg:getU32()
+      local name = msg:getString()
+      local title = msg:getString()
+      local vocationId = msg:getU8()
+      local world = msg:getString()
+      local level = msg:getU16()
+      local isPlayer = msg:getU8() ~= 0
+      local points = msg:getU64()
+      characters[i] = {rank, name, vocationId, world, level, isPlayer, points, title}
+    end
+
+    msg:getU8()
+    msg:getU8()
+    msg:getU8()
+    local lastUpdate = msg:getU32()
+    signalcall(g_game.onHighscores, worlds, selectedWorld, vocations, selectedVocation, categories, selectedCategory, page, pages, characters, lastUpdate)
+  end)
+
   if not g_game.getFeature(GameTibia12Protocol) then
     return
   end
@@ -366,61 +422,7 @@ function registerProtocol()
 	end
   end)
 
-  registerOpcode(ServerPackets.Highscores, function(protocol, msg)
-    local status = msg:getU8()
-    if status ~= 0 then
-      signalcall(g_game.onHighscores, {}, "All Game Worlds", {[0xFFFFFFFF] = "(all)"}, 0xFFFFFFFF, {[0] = "Experience Points"}, 0, 1, 1, {}, os.time())
-      return
-    end
 
-    local worlds = {}
-    local worldCount = msg:getU8()
-    for i = 1, worldCount do
-      worlds[i] = msg:getString()
-    end
-
-    local selectedWorld = msg:getString()
-    msg:getU8() -- Game world category
-    msg:getU8() -- BattlEye world type
-
-    local vocations = {}
-    local vocationCount = msg:getU8()
-    for _ = 1, vocationCount do
-      local vocationId = msg:getU32()
-      vocations[vocationId] = msg:getString()
-    end
-
-    local selectedVocation = msg:getU32()
-    local categories = {}
-    local categoryCount = msg:getU8()
-    for _ = 1, categoryCount do
-      local categoryId = msg:getU8()
-      categories[categoryId] = msg:getString()
-    end
-
-    local selectedCategory = msg:getU8()
-    local page = msg:getU16()
-    local pages = msg:getU16()
-    local characters = {}
-    local characterCount = msg:getU8()
-    for i = 1, characterCount do
-      local rank = msg:getU32()
-      local name = msg:getString()
-      local title = msg:getString()
-      local vocationId = msg:getU8()
-      local world = msg:getString()
-      local level = msg:getU16()
-      local isPlayer = msg:getU8() ~= 0
-      local points = msg:getU64()
-      characters[i] = {rank, name, vocationId, world, level, isPlayer, points, title}
-    end
-
-    msg:getU8()
-    msg:getU8()
-    msg:getU8()
-    local lastUpdate = msg:getU32()
-    signalcall(g_game.onHighscores, worlds, selectedWorld, vocations, selectedVocation, categories, selectedCategory, page, pages, characters, lastUpdate)
-  end)
 
   registerOpcode(ServerPackets.Tutorial, function(protocol, msg)
 	msg:getU8() -- Tutorial id
