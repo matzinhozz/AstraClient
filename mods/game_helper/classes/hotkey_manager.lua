@@ -31,6 +31,14 @@ local function containsHotkey(list, value)
   return false
 end
 
+local function helperDebug(message)
+  if _Helper and _Helper.debugLog then
+    _Helper.debugLog(message)
+  else
+    print("[HelperDebug] " .. tostring(message))
+  end
+end
+
 local function getGameRootPanel()
   if rootWidget and rootWidget.getChildById then
     return rootWidget:getChildById('gameRootPanel')
@@ -71,6 +79,9 @@ end
 local function makeBoundToggle(def)
   local toggleFunc = def.makeToggle()
   return function(widget, keyCode, ...)
+    helperDebug("hotkey fired type=" .. tostring(def.type) ..
+      " keyCode=" .. tostring(keyCode) ..
+      " combo=" .. tostring(helperConfig and helperConfig[def.codeKey]))
     local previousKeyCode = executingHotkeyKeyCode
     executingHotkeyKeyCode = keyCode
     local ok, err = pcall(toggleFunc, widget, keyCode, ...)
@@ -93,10 +104,12 @@ local function canExecuteHelperHotkey()
 
   local consoleTextEdit = modules.game_console and modules.game_console.getConsole and modules.game_console.getConsole()
   if not allowTextFocus and consoleTextEdit and consoleTextEdit.isFocused and consoleTextEdit:isFocused() then
+    helperDebug("hotkey blocked: console text focused")
     return false
   end
 
   if modules.game_interface and modules.game_interface.isInternalLocked and modules.game_interface.isInternalLocked() then
+    helperDebug("hotkey blocked: internal interface locked")
     return false
   end
 
@@ -104,9 +117,11 @@ local function canExecuteHelperHotkey()
     local npcWindow = modules.game_npctrade.npcWindow
     if npcWindow:isVisible() then
       if not allowTextFocus and modules.game_npctrade.searchText and modules.game_npctrade.searchText:isFocused() then
+        helperDebug("hotkey blocked: npc search focused")
         return false
       end
       if not allowTextFocus and modules.game_npctrade.amountText and modules.game_npctrade.amountText:isFocused() then
+        helperDebug("hotkey blocked: npc amount focused")
         return false
       end
     end
@@ -117,6 +132,7 @@ local function canExecuteHelperHotkey()
     if modalDialog:isVisible() then
       local searchInput = modalDialog:recursiveGetChildById('searchInput')
       if not allowTextFocus and searchInput and searchInput:isFocused() then
+        helperDebug("hotkey blocked: modal search focused")
         return false
       end
     end
@@ -125,6 +141,7 @@ local function canExecuteHelperHotkey()
   local storeUI = modules.game_store and modules.game_store.getUI and modules.game_store.getUI()
   if storeUI and storeUI:isVisible() and storeUI.SearchEdit then
     if not allowTextFocus and storeUI.SearchEdit:isFocused() then
+      helperDebug("hotkey blocked: store search focused")
       return false
     end
   end
@@ -401,6 +418,7 @@ function hotkeyManager.register(def)
     local toggleFunc = makeBoundToggle(def)
     helperConfig[def.funcKey] = toggleFunc
     bindHelperKeyDown(code, toggleFunc)
+    helperDebug("hotkey registered type=" .. tostring(def.type) .. " combo=" .. tostring(code))
   end
 end
 
@@ -447,6 +465,7 @@ function hotkeyManager.assign(def, keyComboDesc)
   helperConfig[def.codeKey] = keyComboDesc
   helperConfig[def.funcKey] = toggleFunc
   bindHelperKeyDown(keyComboDesc, toggleFunc)
+  helperDebug("hotkey assigned type=" .. tostring(def.type) .. " combo=" .. tostring(keyComboDesc))
   saveSettings()
 end
 
@@ -494,7 +513,17 @@ end
 
 function hotkeyManager.manageHotkeys(typo)
   local def = findDef(typo)
-  if not def then return end
+  if not def then
+    helperDebug("manageHotkeys ignored unknown type=" .. tostring(typo))
+    return
+  end
+
+  helperDebug("manageHotkeys open type=" .. tostring(typo))
+
+  if not helperWidget then
+    helperDebug("manageHotkeys aborted: helperWidget missing")
+    return
+  end
 
   helperWidget:hide()
 

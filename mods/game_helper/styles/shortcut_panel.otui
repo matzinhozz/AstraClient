@@ -6,7 +6,8 @@ MiniBotShortcutButton < UICheckBox
   icon: /images/game/helper/icons_minibot
   icon-align: center
   size: 19 21
-  @onCheckChange: |
+  @onClick: |
+    self:setChecked(not self:isChecked())
     modules.game_helper.onShortcutButtonChange(self)
 
   UIWidget

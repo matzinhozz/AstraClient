@@ -7,6 +7,10 @@ local function safeLog(level, message)
   g_logger.error(tostring(message))
 end
 
+local function helperDebug(message)
+  print("[HelperDebug] " .. tostring(message))
+end
+
 -- Tabela global para organizar submódulos do Helper
 -- Não sobrescreve se já existir (shortcut_panel.lua pode ser carregado antes)
 if not _Helper then
@@ -15,6 +19,7 @@ end
 
 -- Flag para suprimir mensagens de status durante carregamento de UI (login, loadSettings, etc.)
 _Helper._suppressMessages = false
+_Helper.debugLog = helperDebug
 
 local function installHelperSoundCompatibility()
   if not g_sounds then
@@ -1818,7 +1823,8 @@ _Helper.isHelperAutomaticFunctionsEnabled = function()
 end
 
 _Helper.setHelperAutomaticFunctionsEnabled = function(value)
-  helperAutomaticFunctionsEnabled = value
+  helperAutomaticFunctionsEnabled = value and true or false
+  helperDebug("helper state set enabled=" .. tostring(helperAutomaticFunctionsEnabled))
 end
 
 -- NOTA: _Helper.saveSettings é definido APÓS a função saveSettings() (linha ~4755)
@@ -5278,16 +5284,25 @@ local activeToolWarning = nil
 function showToolWarning(onAcceptCallback, onCancelCallback)
   -- Se o player já marcou "não mostrar novamente", executa direto
   if helperConfig.hideToolWarning then
+    helperDebug("tool warning skipped: hideToolWarning=true")
     if onAcceptCallback then onAcceptCallback() end
     return
   end
 
   -- Se já existe uma janela de aviso aberta, não abre outra
   if activeToolWarning and not activeToolWarning:isDestroyed() then
+    helperDebug("tool warning already open")
     return
   end
 
   local warningWindow = g_ui.createWidget('WarningToolWindow', rootWidget)
+  if not warningWindow then
+    helperDebug("tool warning failed to create WarningToolWindow")
+    if onCancelCallback then onCancelCallback() end
+    return
+  end
+
+  helperDebug("tool warning opened")
   activeToolWarning = warningWindow
 
   -- Título
@@ -5307,7 +5322,11 @@ function showToolWarning(onAcceptCallback, onCancelCallback)
       "[color=#FFD700]aguardar 24 horas[/color] para ser liberado gratuitamente.\n\n" ..
       "[color=#44DD44]Use esta ferramenta com responsabilidade. Esteja sempre atento ao jogo.[/color]"
 
-  contentLabel:parseColoredText(warningText, "$var-text-cip-color")
+  if contentLabel.parseColoredText then
+    contentLabel:parseColoredText(warningText, "$var-text-cip-color")
+  else
+    contentLabel:setText(warningText:gsub("%[/?color[^%]]*%]", ""))
+  end
 
   -- Checkbox "Não mostrar novamente"
   local checkbox = warningWindow:getChildById('warningCheckbox')
@@ -5319,9 +5338,17 @@ function showToolWarning(onAcceptCallback, onCancelCallback)
 
   -- Botão "Entendi"
   local acceptButton = warningWindow:getChildById('warningAcceptButton')
+  if not acceptButton then
+    helperDebug("tool warning missing warningAcceptButton")
+    closeWarning()
+    if onCancelCallback then onCancelCallback() end
+    return
+  end
+
   connect(acceptButton, {
     onClick = function()
-      if checkbox:isChecked() then
+      helperDebug("tool warning accept clicked")
+      if checkbox and checkbox:isChecked() then
         helperConfig.hideToolWarning = true
         saveSettings()
       end
@@ -5333,14 +5360,21 @@ function showToolWarning(onAcceptCallback, onCancelCallback)
   -- ESC fecha sem ativar (reverte estado do checkbox/botão)
   connect(warningWindow, {
     onEscape = function()
+      helperDebug("tool warning cancelled by escape")
       closeWarning()
       if onCancelCallback then onCancelCallback() end
     end
   })
 
-  -- Modal overlay
-  UIModalOverlay.register(warningWindow)
-  UIModalOverlay.show(warningWindow)
+  if UIModalOverlay and UIModalOverlay.register and UIModalOverlay.show then
+    UIModalOverlay.register(warningWindow)
+    UIModalOverlay.show(warningWindow)
+  else
+    helperDebug("tool warning using non-modal fallback")
+    warningWindow:show()
+    warningWindow:raise()
+    warningWindow:focus()
+  end
 end
 
 _Helper.showToolWarning = showToolWarning
@@ -6043,9 +6077,64 @@ end
 
 -- ===== END SPECIAL FOODS =====
 
+local function setHelperEnabled(enabled, source, loadConfig)
+  local requestedEnabled = enabled and true or false
+  helperDebug("setHelperEnabled source=" .. tostring(source) ..
+    " enabled=" .. tostring(requestedEnabled) ..
+    " loadConfig=" .. tostring(loadConfig))
+
+  if loadConfig then
+    loadSettings()
+    if healingPanel and toolsPanel then
+      _Helper._suppressMessages = true
+      onLoadHelperData()
+      _Helper._suppressMessages = false
+      helperDebug("setHelperEnabled loaded saved helper data")
+    else
+      helperDebug("setHelperEnabled skipped onLoadHelperData panelsReady=" ..
+        tostring(healingPanel ~= nil and toolsPanel ~= nil))
+    end
+  end
+
+  helperAutomaticFunctionsEnabled = requestedEnabled
+
+  if helper then
+    botStatus()
+  end
+
+  if _Helper.Shortcut and _Helper.Shortcut.syncButton then
+    _Helper.Shortcut.syncButton('shortcutHelper', helperAutomaticFunctionsEnabled)
+  end
+
+  if saveSettings then
+    saveSettings()
+  end
+end
+
+function toggleHelperStatusButton()
+  helperDebug("helper status button clicked current=" .. tostring(helperAutomaticFunctionsEnabled))
+  setHelperEnabled(not helperAutomaticFunctionsEnabled, "button", true)
+  if modules.game_textmessage and modules.game_textmessage.displayGameMessage then
+    modules.game_textmessage.displayGameMessage("Helper toggled + Config LOADED!")
+  end
+end
+
+function toggleCavebotFromButton()
+  local cavebotModule = modules.game_helper and modules.game_helper.cavebot
+  if not cavebotModule or not cavebotModule.toggle then
+    helperDebug("cavebot button clicked but cavebot module is missing")
+    return
+  end
+
+  local enabled = cavebotModule.isEnabled and cavebotModule.isEnabled() or false
+  helperDebug("cavebot button clicked current=" .. tostring(enabled) .. " next=" .. tostring(not enabled))
+  cavebotModule.toggle(not enabled)
+end
+
 function botStatus()
   local contentPanel = getHelperContentPanel()
   if not contentPanel then
+    helperDebug("botStatus skipped: content panel missing")
     return
   end
 
@@ -6054,6 +6143,7 @@ function botStatus()
   local setKeyButton = contentPanel:recursiveGetChildById("setKeyHelperButton")
 
   if not helperStatusLabel then
+    helperDebug("botStatus skipped: helperStatusLabel missing")
     return
   end
 
@@ -6085,22 +6175,7 @@ function botStatus()
   -- helperStatus = Toggle + Load Config
   if helperStatus and not helperStatus.clickHandlerSetup then
     helperStatus.onClick = function()
-      -- Toggle status atual
-      helperAutomaticFunctionsEnabled = not helperAutomaticFunctionsEnabled
-
-      -- SEMPRE carrega config ao clicar (mesmo toggle)
-      loadSettings()
-      if healingPanel and toolsPanel then
-        _Helper._suppressMessages = true
-        onLoadHelperData()
-        _Helper._suppressMessages = false
-      end
-
-      modules.game_textmessage.displayGameMessage("Helper toggled + Config LOADED!")
-
-      botStatus() -- Refresh visual
-      -- Sincronizar com shortcut panel
-      _Helper.Shortcut.syncButton('shortcutHelper', helperAutomaticFunctionsEnabled)
+      toggleHelperStatusButton()
     end
     helperStatus.clickHandlerSetup = true
   end
@@ -6134,18 +6209,8 @@ function toggleNextWindow()
 end
 
 function toggleHelperFunctions()
-  helperAutomaticFunctionsEnabled = not helperAutomaticFunctionsEnabled
-
-  if helper then
-    botStatus()
-  end
-
-  -- Sincronizar com shortcut panel
-  _Helper.Shortcut.syncButton('shortcutHelper', helperAutomaticFunctionsEnabled)
-
-  if saveSettings then
-    saveSettings()
-  end
+  helperDebug("toggleHelperFunctions called current=" .. tostring(helperAutomaticFunctionsEnabled))
+  setHelperEnabled(not helperAutomaticFunctionsEnabled, "hotkey", false)
 end
 
 function manageHotkeys(typo)

@@ -262,7 +262,7 @@ NewHeadlessWindow
       margin-left: 5
       margin-bottom: 2
       image-source: /images/ui/icon-yes
-      @onClick: botStatus()
+      @onClick: toggleHelperStatusButton()
       !tooltip: tr(' - Helper Status: [ENABLED]')
 
     Button
@@ -273,7 +273,7 @@ NewHeadlessWindow
       margin-left: 5
       margin-bottom: -3
       !text: tr('Set Key')
-      @onClick: manageHotkeys("Enable/Disable Helper")
+      @onClick: toggleHelperStatusButton()
 
     Label
       id: cavebotStatusLabel
@@ -295,4 +295,4 @@ NewHeadlessWindow
       !text: tr('Off')
       color: #e40b0bff
       font: $var-main-font
-      @onClick: manageHotkeys("Enable/Disable Cavebot")
+      @onClick: toggleCavebotFromButton()

@@ -33,6 +33,10 @@ local lastAutoWalkAttempt = 0      -- timestamp da ultima tentativa de autowalk 
 -- ===== FUNCOES INTERNAS =====
 
 local MAX_EXTRA_DISTANCE = 3  -- tenta ate +3 sqm alem do adjacente (1..4 sqm do target)
+
+local function tileHasFloorChange(tile)
+  return tile and tile.hasFloorChange and tile:hasFloorChange()
+end
 local PATHFIND_MAX_COMPLEXITY = 1000
 local PATHFIND_FLAGS = 3  -- AllowNotSeenTiles(1) + AllowCreatures(2)
 
@@ -67,7 +71,7 @@ local function tryAutoWalkToTarget(localPlayer, targetPos, playerPos)
       local pos = { x = c.x, y = c.y, z = targetPos.z }
       -- Rejeita tiles com floor-change (escada/hole)
       local tile = g_map.getTile(pos)
-      if tile and not tile:hasFloorChange() then
+      if tile and not tileHasFloorChange(tile) then
       local ok, dirs = pcall(g_map.findPath, playerPos, pos, PATHFIND_MAX_COMPLEXITY, PATHFIND_FLAGS)
       if ok and dirs and #dirs > 0 then
         localPlayer:autoWalk(pos)

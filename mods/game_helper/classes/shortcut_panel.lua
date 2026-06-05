@@ -252,6 +252,9 @@ _Helper.Shortcut.onButtonChange = function(button)
 
   local id = button:getId()
   local isChecked = button:isChecked()
+  if _Helper.debugLog then
+    _Helper.debugLog("shortcut clicked id=" .. tostring(id) .. " checked=" .. tostring(isChecked))
+  end
 
   _Helper.Shortcut.updateMark(button, isChecked)
 
@@ -261,6 +264,9 @@ _Helper.Shortcut.onButtonChange = function(button)
     end
     if botStatus then
       botStatus()
+    end
+    if saveSettings then
+      saveSettings()
     end
   elseif id == 'shortcutAutoTarget' then
     -- Sincronizar com checkbox do painel (que vai chamar toggleAutoTarget)
@@ -339,6 +345,8 @@ _Helper.Shortcut.onButtonChange = function(button)
     -- Sincronizar com cavebot toggle
     if modules.game_helper and modules.game_helper.cavebot then
       modules.game_helper.cavebot.toggle(isChecked)
+    elseif _Helper.debugLog then
+      _Helper.debugLog("shortcut cavebot clicked but cavebot module is missing")
     end
   end
 end
