@@ -127,5 +127,24 @@ ImageButton < UIButton
   text-offset: 0 1
   color: #e0e0e0
 
+QtButton < UIButton
+  font: cipsoftFont
+  size: 106 23
+  text-offset: 0 0
+  image-source: /images/ui/button
+  image-clip: 0 0 22 23
+  image-border: 3
+  padding: 5 10 5 10
+  opacity: 1.0
+  color: white
+
+  $pressed:
+    image-clip: 0 46 22 23
+    text-offset: 1 1
+
+  $disabled:
+    color: white
+    opacity: 0.6
+
 CloseButton < Button
   !text: tr('Close')
