@@ -156,6 +156,113 @@ local directionOffsets = {
 }
 local ropes = { 3003, 646, 9594, 9596, 9598 }
 local shovels = { 3457, 5710, 9594, 9596, 9598 }
+local cavebotMarkerWidgets = {}
+local selectedCavebotMarkerIndex = nil
+local draggingCavebotMarkerIndex = nil
+
+local function getCavebotMinimap()
+  if cavebotMap and (not cavebotMap.isDestroyed or not cavebotMap:isDestroyed()) and cavebotMap.addWidget then
+    return cavebotMap
+  end
+  if minimapWidget and minimapWidget.addWidget then
+    return minimapWidget
+  end
+  return nil
+end
+
+local function getCavebotMarkerWidget(entry)
+  if not entry or not entry.map or not entry.id then
+    return nil
+  end
+  return entry.map._minimapWidgets and entry.map._minimapWidgets[entry.id] or nil
+end
+
+local function updateCavebotMarkerState(index)
+  local entry = cavebotMarkerWidgets[index]
+  local widget = getCavebotMarkerWidget(entry)
+  if not widget or not widget.setImageColor then
+    return
+  end
+
+  if index == draggingCavebotMarkerIndex then
+    widget:setImageColor('#ff7777ff')
+  elseif index == selectedCavebotMarkerIndex then
+    widget:setImageColor('#ffff66ff')
+  else
+    widget:setImageColor('#ffffffff')
+  end
+end
+
+local function updateAllCavebotMarkerStates()
+  for index in pairs(cavebotMarkerWidgets) do
+    updateCavebotMarkerState(index)
+  end
+end
+
+local function addCavebotMarker(pos, iconId, tooltip)
+  local map = getCavebotMinimap()
+  if not map or not map.addWidget or not pos then
+    return nil
+  end
+
+  local markerIndex = #cavebotMarkerWidgets + 1
+  local icon = tonumber(iconId) or WAYPOINT_ICON[WAYPOINT_TYPE.WALK]
+  local widgetId = map:addWidget('/data/images/game/minimap/flag' .. icon .. '.png', { width = 11, height = 11 },
+    { x = pos.x, y = pos.y, z = pos.z }, tooltip or ('Waypoint ' .. markerIndex))
+  cavebotMarkerWidgets[markerIndex] = { map = map, id = widgetId }
+
+  local widget = getCavebotMarkerWidget(cavebotMarkerWidgets[markerIndex])
+  if widget then
+    if widget.setPhantom then
+      widget:setPhantom(true)
+    end
+    if widget.setTooltip then
+      widget:setTooltip(tooltip or ('Waypoint ' .. markerIndex))
+    end
+  end
+
+  updateCavebotMarkerState(markerIndex)
+  return widgetId
+end
+
+local function clearCavebotMarkers()
+  for _, entry in pairs(cavebotMarkerWidgets) do
+    if entry.map and entry.map.removeWidget and entry.id then
+      entry.map:removeWidget(entry.id)
+    end
+  end
+  cavebotMarkerWidgets = {}
+  selectedCavebotMarkerIndex = nil
+  draggingCavebotMarkerIndex = nil
+end
+
+local function setCavebotMarkerPosition(index, pos)
+  local markerIndex = (tonumber(index) or -1) + 1
+  local entry = cavebotMarkerWidgets[markerIndex]
+  if entry and entry.map and entry.map.moveWidget and pos then
+    entry.map:moveWidget(entry.id, { x = pos.x, y = pos.y, z = pos.z })
+  end
+end
+
+local function setSelectedCavebotMarker(index)
+  local markerIndex = tonumber(index)
+  selectedCavebotMarkerIndex = markerIndex and markerIndex >= 0 and markerIndex + 1 or nil
+  updateAllCavebotMarkerStates()
+end
+
+local function setDraggingCavebotMarker(index)
+  local markerIndex = tonumber(index)
+  draggingCavebotMarkerIndex = markerIndex and markerIndex >= 0 and markerIndex + 1 or nil
+  updateAllCavebotMarkerStates()
+end
+
+if g_minimap then
+  g_minimap.addCavebotMarker = g_minimap.addCavebotMarker or addCavebotMarker
+  g_minimap.clearCavebotMarkers = g_minimap.clearCavebotMarkers or clearCavebotMarkers
+  g_minimap.setCavebotMarkerPosition = g_minimap.setCavebotMarkerPosition or setCavebotMarkerPosition
+  g_minimap.setSelectedCavebotMarker = g_minimap.setSelectedCavebotMarker or setSelectedCavebotMarker
+  g_minimap.setDraggingCavebotMarker = g_minimap.setDraggingCavebotMarker or setDraggingCavebotMarker
+end
 
 -- Lookup table para offsets de direção (substitui cadeia de if/elseif)
 local DIR_OFFSETS = {

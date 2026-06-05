@@ -8,6 +8,28 @@ local hotkeyManager = _Helper.HotkeyManager
 
 local helperWidget = nil
 
+local function getAssignBlockedKeys()
+  if type(AssignBlockedKeys) == 'table' then
+    return AssignBlockedKeys
+  end
+  if type(blockedKeys) == 'table' then
+    return blockedKeys
+  end
+  return {}
+end
+
+local function containsHotkey(list, value)
+  if type(list) ~= 'table' or value == nil then
+    return false
+  end
+  for _, item in pairs(list) do
+    if item == value then
+      return true
+    end
+  end
+  return false
+end
+
 function hotkeyManager.setHelperWidget(widget)
   helperWidget = widget
 end
@@ -475,7 +497,7 @@ function hotkeyManager.manageHotkeys(typo)
     end
     local keyCombo = determineKeyComboDesc(keyCode, keyboardModifiers, keyText)
     local resetCombo = { "Shift", "Ctrl", "Alt" }
-    if table.contains(resetCombo, keyCombo) then
+    if containsHotkey(resetCombo, keyCombo) then
       assignWindow.display:setText('')
       assignWindow.warning:setVisible(false)
       assignWindow.buttonOk:setEnabled(true)
@@ -483,7 +505,7 @@ function hotkeyManager.manageHotkeys(typo)
     end
     local displayText = keyCombo or keyCodeMap[keyCode] or tostring(keyCode)
 
-    if table.contains(AssignBlockedKeys, keyCombo) then
+    if containsHotkey(getAssignBlockedKeys(), keyCombo) then
       assignWindow.warning:setVisible(true)
       assignWindow.warning:setText("This hotkey is already in use and cannot be overwritten.")
       assignWindow.buttonOk:setEnabled(false)

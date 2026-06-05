@@ -16,6 +16,51 @@ end
 -- Flag para suprimir mensagens de status durante carregamento de UI (login, loadSettings, etc.)
 _Helper._suppressMessages = false
 
+local function installHelperSoundCompatibility()
+  if not g_sounds then
+    return
+  end
+
+  local function getAlarmChannel()
+    if g_sounds.getChannel then
+      return g_sounds.getChannel(SoundChannels and SoundChannels.Bot or 4)
+    end
+    return nil
+  end
+
+  if not g_sounds.playAlarm then
+    g_sounds.playAlarm = function(file)
+      local channel = getAlarmChannel()
+      if channel then
+        if channel.setEnabled then
+          channel:setEnabled(true)
+        end
+        if channel.stop then
+          channel:stop(0)
+        end
+        if channel.play then
+          return channel:play(file, 0, 1.0)
+        end
+      end
+
+      if g_sounds.play then
+        return g_sounds.play(file, 0, 1.0)
+      end
+    end
+  end
+
+  if not g_sounds.stopAlarm then
+    g_sounds.stopAlarm = function()
+      local channel = getAlarmChannel()
+      if channel and channel.stop then
+        return channel:stop(0)
+      end
+    end
+  end
+end
+
+installHelperSoundCompatibility()
+
 -- Resolve custom rune: if area is a table (custom definition) but empty, replace with SpellAreas.AREA_CIRCLE3X3
 function _Helper.resolveCustomRuneArea(runeSpell)
   if runeSpell and runeSpell.area then

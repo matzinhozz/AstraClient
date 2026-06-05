@@ -148,3 +148,27 @@ QtButton < UIButton
 
 CloseButton < Button
   !text: tr('Close')
+
+CancelButton < Button
+  !text: tr('Cancel')
+
+OkButton < Button
+  !text: tr('Ok')
+
+BackButton < Button
+  !text: tr('Back')
+
+ApplyButton < Button
+  !text: tr('Apply')
+
+ClearButton < Button
+  !text: tr('Clear')
+
+ResetButton < Button
+  !text: tr('Reset')
+
+RefreshButton < Button
+  !text: tr('Refresh')
+
+SaveButton < Button
+  !text: tr('Save')
