@@ -774,6 +774,9 @@ return {
 		value = 1,
         apply = function(value)
             g_map.setArcStyle(value - 1)
+            if StatusIconBar and type(StatusIconBar.updatePosition) == 'function' then
+                StatusIconBar.updatePosition()
+            end
             return true
         end,
 	},
@@ -1088,6 +1091,66 @@ return {
         end,
 	},
 
+	ownSpellOpacity = {
+		value = 100,
+        apply = function(value)
+            g_client.setOwnSpellEffectAlpha(value / 100.0)
+            local effects = GameOptions:getLoadedWindow("effects")
+            effects:recursiveGetChildById('ownSpellEffectLabel'):setText(tr('Own Spells Effect: %s%%', value))
+            return true
+        end,
+        tempApply = function(value)
+            local effects = GameOptions:getLoadedWindow("effects")
+            effects:recursiveGetChildById('ownSpellEffectLabel'):setText(tr('Own Spells Effect: %s%%', value))
+            return true
+        end,
+	},
+
+	otherSpellOpacity = {
+		value = 100,
+        apply = function(value)
+            g_client.setOtherPlayerSpellEffectAlpha(value / 100.0)
+            local effects = GameOptions:getLoadedWindow("effects")
+            effects:recursiveGetChildById('otherSpellEffectLabel'):setText(tr('Other Player Spells Effect: %s%%', value))
+            return true
+        end,
+        tempApply = function(value)
+            local effects = GameOptions:getLoadedWindow("effects")
+            effects:recursiveGetChildById('otherSpellEffectLabel'):setText(tr('Other Player Spells Effect: %s%%', value))
+            return true
+        end,
+	},
+
+	creatureSpellOpacity = {
+		value = 100,
+        apply = function(value)
+            g_client.setCreatureSpellEffectAlpha(value / 100.0)
+            local effects = GameOptions:getLoadedWindow("effects")
+            effects:recursiveGetChildById('creatureSpellEffectLabel'):setText(tr('Creature Spells Effect: %s%%', value))
+            return true
+        end,
+        tempApply = function(value)
+            local effects = GameOptions:getLoadedWindow("effects")
+            effects:recursiveGetChildById('creatureSpellEffectLabel'):setText(tr('Creature Spells Effect: %s%%', value))
+            return true
+        end,
+	},
+
+	bossSpellOpacity = {
+		value = 100,
+        apply = function(value)
+            g_client.setBossAreaCreatureEffectAlpha(value / 100.0)
+            local effects = GameOptions:getLoadedWindow("effects")
+            effects:recursiveGetChildById('bossSpellEffectLabel'):setText(tr('Boss Area Creature Effect: %s%%', value))
+            return true
+        end,
+        tempApply = function(value)
+            local effects = GameOptions:getLoadedWindow("effects")
+            effects:recursiveGetChildById('bossSpellEffectLabel'):setText(tr('Boss Area Creature Effect: %s%%', value))
+            return true
+        end,
+	},
+
   ignoreSpecialEffects = {
     value = false,
     apply = function(value)
@@ -1237,12 +1300,18 @@ return {
             if wid then
               wid:setText(tr('Distance: %d%%', value))
             end
+            if StatusIconBar and type(StatusIconBar.updatePosition) == 'function' then
+                StatusIconBar.updatePosition()
+            end
             return true
         end,
         tempApply = function(value)
             local wid = GameOptions:getLoadedWindow('hud'):recursiveGetChildById('distanceLabel')
             if wid then
               wid:setText(tr('Distance: %d%%', value))
+            end
+            if StatusIconBar and type(StatusIconBar.updatePosition) == 'function' then
+                StatusIconBar.updatePosition()
             end
             return true
         end,

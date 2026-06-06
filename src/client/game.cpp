@@ -1825,3 +1825,24 @@ int Game::getOs()
         return 25;
     return 21; // linux
 }
+
+void Game::sendStartOfflineTraining(const uint8_t skillType)
+{
+    if (!m_protocolGame)
+        return;
+    m_protocolGame->sendStartOfflineTraining(skillType);
+}
+
+void Game::soulsealFightAction(const uint16_t raceId)
+{
+    if (!m_protocolGame)
+        return;
+    m_protocolGame->sendSoulSealsAction(raceId);
+}
+
+void Game::sendTutorialChangeVocation(const uint8_t vocationClientId)
+{
+    if (!m_protocolGame)
+        return;
+    m_protocolGame->sendTutorialChangeVocation(vocationClientId);
+}

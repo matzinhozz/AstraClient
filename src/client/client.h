@@ -24,6 +24,7 @@
 #define CLIENT_H
 
 #include "global.h"
+#include <array>
 
 class Client
 {
@@ -31,6 +32,28 @@ public:
     void init(std::vector<std::string>& args);
     void terminate();
     void registerLuaFunctions();
+
+    float getEffectAlpha(uint8_t source) const {
+        if (source >= m_effectAlphas.size()) return 1.0f;
+        return m_effectAlphas[source];
+    }
+    void setEffectAlpha(uint8_t source, float v) {
+        if (source < m_effectAlphas.size())
+            m_effectAlphas[source] = std::isfinite(v) ? std::max(0.0f, std::min(1.0f, v)) : 1.0f;
+    }
+    void setEffectAlpha(const float v) { setOwnSpellEffectAlpha(v); }
+    float getEffectAlpha() const { return getEffectAlpha(Otc::ME_SOURCE_OWN); }
+    float getOwnSpellEffectAlpha() const { return m_effectAlphas[Otc::ME_SOURCE_OWN]; }
+    void setOwnSpellEffectAlpha(float v) { setEffectAlpha(Otc::ME_SOURCE_OWN, v); }
+    float getOtherPlayerSpellEffectAlpha() const { return m_effectAlphas[Otc::ME_SOURCE_OTHER_PLAYER]; }
+    void setOtherPlayerSpellEffectAlpha(float v) { setEffectAlpha(Otc::ME_SOURCE_OTHER_PLAYER, v); }
+    float getCreatureSpellEffectAlpha() const { return m_effectAlphas[Otc::ME_SOURCE_MONSTER]; }
+    void setCreatureSpellEffectAlpha(float v) { setEffectAlpha(Otc::ME_SOURCE_MONSTER, v); }
+    float getBossAreaCreatureEffectAlpha() const { return m_effectAlphas[Otc::ME_SOURCE_BOSS]; }
+    void setBossAreaCreatureEffectAlpha(float v) { setEffectAlpha(Otc::ME_SOURCE_BOSS, v); }
+
+private:
+    std::array<float, 5> m_effectAlphas{ 1.0f, 1.0f, 1.0f, 1.0f, 1.0f };
 };
 
 extern Client g_client;

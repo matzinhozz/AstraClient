@@ -357,6 +357,9 @@ void Client::registerLuaFunctions()
     g_lua.bindSingletonFunction("g_game", "sendGemAtelierAction", &Game::gemAction, &g_game);
     g_lua.bindSingletonFunction("g_game", "sendWeaponProficiencyAction", &Game::sendWeaponProficiencyAction, &g_game);
     g_lua.bindSingletonFunction("g_game", "sendWeaponProficiencyApply", &Game::sendWeaponProficiencyApply, &g_game);
+    g_lua.bindSingletonFunction("g_game", "sendStartOfflineTraining", &Game::sendStartOfflineTraining, &g_game);
+    g_lua.bindSingletonFunction("g_game", "soulsealFightAction", &Game::soulsealFightAction, &g_game);
+    g_lua.bindSingletonFunction("g_game", "sendTutorialChangeVocation", &Game::sendTutorialChangeVocation, &g_game);
     g_lua.bindSingletonFunction("g_game", "sendQuickLoot", &Game::sendQuickLoot, &g_game);
     g_lua.bindSingletonFunction("g_game", "quickLoot", &Game::quickLoot, &g_game);
     g_lua.bindSingletonFunction("g_game", "quickLootArea", &Game::quickLootArea, &g_game);
@@ -1117,4 +1120,21 @@ void Client::registerLuaFunctions()
     g_lua.bindClassMemberFunction<UIGrid>("getGridColor", &UIGrid::getGridColor);
 
     g_lua.registerClass<UIMapAnchorLayout, UIAnchorLayout>();
+
+    g_lua.registerSingletonClass("g_client");
+    g_lua.bindSingletonFunction("g_client", "setEffectAlpha", [](double value) {
+        g_client.setEffectAlpha((float)value);
+    });
+    g_lua.bindSingletonFunction("g_client", "setOwnSpellEffectAlpha", [](double value) {
+        g_client.setOwnSpellEffectAlpha((float)value);
+    });
+    g_lua.bindSingletonFunction("g_client", "setOtherPlayerSpellEffectAlpha", [](double value) {
+        g_client.setOtherPlayerSpellEffectAlpha((float)value);
+    });
+    g_lua.bindSingletonFunction("g_client", "setCreatureSpellEffectAlpha", [](double value) {
+        g_client.setCreatureSpellEffectAlpha((float)value);
+    });
+    g_lua.bindSingletonFunction("g_client", "setBossAreaCreatureEffectAlpha", [](double value) {
+        g_client.setBossAreaCreatureEffectAlpha((float)value);
+    });
 }

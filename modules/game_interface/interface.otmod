@@ -16,6 +16,7 @@ Module
     - game_console
     - game_outfit
     - game_healthinfo
+    - game_statusiconbar
     - game_inventory
     - game_containers
     - game_textwindow
@@ -66,6 +67,8 @@ Module
     - game_attachedeffects
     - game_offsets
     - game_proficiency
+    - game_healthcircle
+    - game_notifications
 
   @onLoad: init()
   @onUnload: terminate()

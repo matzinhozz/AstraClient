@@ -58,6 +58,7 @@ namespace Proto {
         GameServerDeath                     = 40,
         GameServerSupplyStash               = 41,
         GameServerSpecialContainer          = 42,
+        GameServerMultiOfflineTrainingDialog = 27,
 
         // Astra 8.60 custom packets sent before the regular game opcode range.
         GameServerCustomUnjustifiedStats    = 47,
@@ -109,6 +110,7 @@ namespace Proto {
         GameServerCreateContainer           = 112,
         GameServerChangeInContainer         = 113,
         GameServerDeleteInContainer         = 114,
+        GameServerTakeScreenshot           = 117,
         GameServerItemDetail                = 118,
         GameServerSetInventory              = 120,
         GameServerDeleteInventory           = 121,
@@ -168,6 +170,7 @@ namespace Proto {
         GameServerWalkWait                  = 182,
         GameServerUnjustifiedStats          = 183,
         GameServerPvpSituations             = 184,
+        GameServerTaskHuntingBasicData     = 186,
         GameServerHunting                   = 187,
         GameServerFloorChangeUp             = 190,
         GameServerFloorChangeDown           = 191,
@@ -269,8 +272,10 @@ namespace Proto {
         ClientTurnEast                      = 112,
         ClientTurnSouth                     = 113,
         ClientTurnWest                      = 114,
+        ClientTutorialChangeVocation        = 110,
         ClientEquipItem                     = 119, // 910
         ClientMove                          = 120,
+        ClientStartOfflineTraining          = 116,
         ClientInspectNpcTrade               = 121,
         ClientBuyItem                       = 122,
         ClientSellItem                      = 123,

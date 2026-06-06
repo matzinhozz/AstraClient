@@ -1417,3 +1417,27 @@ void ProtocolGame::addPosition(const OutputMessagePtr& msg, const Position& posi
     msg->addU16(position.y);
     msg->addU8(position.z);
 }
+
+void ProtocolGame::sendStartOfflineTraining(const uint8_t skillType)
+{
+    auto msg = std::make_shared<OutputMessage>();
+    msg->addU8(Proto::ClientStartOfflineTraining);
+    msg->addU8(skillType);
+    send(msg);
+}
+
+void ProtocolGame::sendSoulSealsAction(const uint16_t raceId)
+{
+    auto msg = std::make_shared<OutputMessage>();
+    msg->addU8(Proto::ClientPreyHuntingAction);
+    msg->addU16(raceId);
+    send(msg);
+}
+
+void ProtocolGame::sendTutorialChangeVocation(const uint8_t vocationClientId)
+{
+    auto msg = std::make_shared<OutputMessage>();
+    msg->addU8(Proto::ClientTutorialChangeVocation);
+    msg->addU8(vocationClientId);
+    send(msg);
+}

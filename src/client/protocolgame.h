@@ -136,6 +136,9 @@ public:
     void sendDlls();
     void sendWindows();
     void sendOpenWheel(uint32_t playerId);
+    void sendStartOfflineTraining(uint8_t skillType);
+    void sendSoulSealsAction(uint16_t raceId);
+    void sendTutorialChangeVocation(uint8_t vocationClientId);
     void sendApplyWheelPoints(const std::vector<uint16_t>& slotPoints, uint16_t greenGem, uint16_t redGem, uint16_t aquaGem, uint16_t purpleGem);
     void sendWheelGemAction(uint8_t actionType, uint8_t param, uint8_t pos);
     void sendWeaponProficiencyAction(uint8_t actionType, uint16_t itemId = 0);
@@ -276,6 +279,7 @@ private:
     void parsePlayerInventory(const InputMessagePtr& msg);
     void parseModalDialog(const InputMessagePtr& msg);
     void parseClientCheck(const InputMessagePtr& msg);
+    void parseClientEvent(const InputMessagePtr& msg);
     void parseGameNews(const InputMessagePtr& msg);
     void parseMessageDialog(const InputMessagePtr& msg);
     void parseBlessDialog(const InputMessagePtr& msg);
@@ -301,6 +305,8 @@ private:
     void parseSupplyStash(const InputMessagePtr& msg);
     void parseSpecialContainer(const InputMessagePtr& msg);
     void parseDepotState(const InputMessagePtr& msg);
+    void parseMultiOfflineTrainingDialog(const InputMessagePtr& msg);
+    void parseTaskHuntingBasicData(const InputMessagePtr& msg);
     void parseSupplyTracker(const InputMessagePtr& msg);
     void parseTournamentLeaderboard(const InputMessagePtr& msg);
     void parseCustomItemValues(const InputMessagePtr& msg);

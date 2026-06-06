@@ -1,4 +1,4 @@
-local actionBars = {}
+﻿local actionBars = {}
 local activeActionBars = {}
 
 local window = nil
@@ -16,6 +16,7 @@ local spellModification = {}
 local spellListData = {}
 
 local spellCooldownCache = {}
+local spellGroupCooldownCache = {}
 local spellGroupPressed = {}
 
 local cachedItemWidget = {}
@@ -53,7 +54,9 @@ function getButtonCache(button)
 			buttonParent = nil,
 			itemId = 0,
 			equipmentPreset = {},
-			equipmentPresetIcon = ""
+			equipmentPresetIcon = "",
+			multiActions = {{}, {}, {}},
+			multiSlotIndex = 0
 		}
 	end
 
@@ -79,7 +82,9 @@ function getButtonCache(button)
 			buttonParent = nil,
 			itemId = 0,
 			equipmentPreset = {},
-			equipmentPresetIcon = ""
+			equipmentPresetIcon = "",
+			multiActions = {{}, {}, {}},
+			multiSlotIndex = 0
 		}
 	end
 
@@ -132,6 +137,7 @@ local UseTypesTip = {
 }
 
 function init()
+	g_ui.importStyle('multiaction.otui')
 	connect(LocalPlayer, {
 		onManaChange 		= onUpdateActionBarStatus,
 		onSoulChange 		= onUpdateActionBarStatus,
@@ -500,6 +506,8 @@ function onSpellGroupCooldown(groupId, delay)
 	if not m_settings.getOption("graphicalCooldown") and not m_settings.getOption("cooldownSecond") then
 		return true
 	end
+
+	spellGroupCooldownCache[groupId] = {exhaustion = delay, startTime = g_clock.millis()}
 
 	for _, actionbar in pairs(activeActionBars) do
 		for _, button in pairs(actionbar.tabBar:getChildren()) do
@@ -965,6 +973,8 @@ function configureButtonMouseRelease(button)
 		menu:addOption(button.cache.isPassive and tr('Edit Passive Ability') or tr('Assign Passive Ability'), function() assignPassive(button) end)
 		menu:addOption(button.cache.hotkey and tr('Edit Hotkey') or tr('Assign Hotkey'), function() assignHotkey(button) end)
 		menu:addOption(hasEquipmentPreset and tr('Edit Equipments') or tr('Assign Equipments'), function() assignEquipment(button) end)
+		menu:addSeparator()
+		menu:addOption(tr('Multi-Action'), function() toggleMultiActionPanel(button) end)
 		if button.cache.actionType > 0 then
 			menu:addSeparator()
 			menu:addOption(tr('Clear Action'), function() clearButton(button, true) end)
@@ -1184,6 +1194,7 @@ function onUpdateActionBarStatus()
 	for _, actionbar in pairs(activeActionBars) do
 		for _, button in pairs(actionbar.tabBar:getChildren()) do
             updateButtonState(button)
+			pcall(function() updateMultiButtonState(button) end)
 		end
 	end
 end
@@ -1364,7 +1375,10 @@ function onAssignItem(self, mousePosition, mouseButton, button)
 	assignItem(button, itemId, itemTier)
 end
 
-function assignSpell(button)
+function assignSpell(button, multiSlotIndex)
+	if multiSlotIndex then
+		getButtonCache(button).multiSlotIndex = multiSlotIndex
+	end
 	local radio = UIRadioGroup.create()
 	window = g_ui.loadUI('spell', g_ui.getRootWidget())
 	window:show()
@@ -1505,6 +1519,7 @@ function assignSpell(button)
 
 		Options.createOrUpdateText(tonumber(barID), tonumber(buttonID), param, true)
 		updateButton(button)
+		handleMultiSlotSave(button)
 
 		if destroy then
 			g_client.setInputLockWidget(nil)
@@ -1547,12 +1562,13 @@ function assignText(button)
 	end
 
 	local okFunc = function(destroy)
-		local autoSay = window.contentPanel.checkPanel.tick:isChecked()
+		local 		autoSay = window.contentPanel.checkPanel.tick:isChecked()
 		local text = window.contentPanel.text:getText()
 		local fomartedText = Spells.getSpellFormatedName(text)
 		local barID, buttonID = string.match(button:getId(), "(.*)%.(.*)")
 		Options.createOrUpdateText(tonumber(barID), tonumber(buttonID), fomartedText, autoSay)
 		updateButton(button)
+		handleMultiSlotSave(button)
 
 		if destroy then
 			g_client.setInputLockWidget(nil)
@@ -1727,6 +1743,7 @@ function assignItem(button, itemId, itemTier, dragEvent)
 
 		Options.createOrUpdateAction(tonumber(barID), tonumber(buttonID), selected, itemId, itemTier, smartMode)
 		updateButton(button)
+		handleMultiSlotSave(button)
 
 		if destroy then
 			g_client.setInputLockWidget(nil)
@@ -2654,4 +2671,450 @@ function updateButtonState(button)
 			end
 		end
 	end
+end
+-- ============================================================
+-- MULTI-ACTION SYSTEM (ported from mehah PR #1604)
+-- ============================================================
+multiPanel = nil
+cacheMultiActionButtons = {}
+multiActionCooldownEvents = {}
+
+local function hasMultiActions(multiActions)
+	if not multiActions then return false end
+	local count = 0
+	for i = 1, 3 do
+		if type(multiActions[i]) == "table" and next(multiActions[i]) ~= nil then count = count + 1 end
+	end
+	return count >= 2
+end
+
+local function countFilledMultiSlots(multiActions)
+	if not multiActions then return 0 end
+	local count = 0
+	for i = 1, 3 do
+		if type(multiActions[i]) == "table" and next(multiActions[i]) ~= nil then count = count + 1 end
+	end
+	return count
+end
+
+local function splitButtonId(button)
+	return string.match(button:getId(), "(.*)%.(.*)")
+end
+
+local function localGetActionName(actionType)
+	if type(actionType) == "string" then return actionType end
+	return getActionName(actionType)
+end
+
+local function playerCanUseSpellLocal(spellData)
+	if not g_game.isOnline() or not spellData then return false end
+	if spellData.needLearn and not spellListData[tostring(spellData.id)] then return false end
+	if spellData.mana and player and player:getMana() < spellData.mana then return false end
+	if spellData.level and player and player:getLevel() < spellData.level then return false end
+	if spellData.soul and player and player:getSoul() < spellData.soul then return false end
+	if spellData.vocations and player and not table.contains(spellData.vocations, translateVocation(player:getVocation())) then return false end
+	return true
+end
+
+local function getSpellCooldownRemaining(spellId)
+	local cd = spellCooldownCache[spellId]
+	if not cd then return 0 end
+	local remaining = (cd.startTime + cd.exhaustion) - g_clock.millis()
+	return remaining > 0 and remaining or 0
+end
+
+local function getSpellGroupCooldownRemaining(spellData)
+	if not spellData or not spellData.group or not spellGroupCooldownCache then return 0 end
+	local groupIds = Spells.getGroupIds and Spells.getGroupIds(spellData)
+	if not groupIds then return 0 end
+	local maxRemaining = 0
+	local now = g_clock.millis()
+	for _, groupId in pairs(groupIds) do
+		local gc = spellGroupCooldownCache[groupId]
+		if gc then
+			local remaining = (gc.startTime + gc.exhaustion) - now
+			if remaining > maxRemaining then maxRemaining = remaining end
+		end
+	end
+	return maxRemaining > 0 and maxRemaining or 0
+end
+
+local function findNextAvailableAction(multiActions)
+	if not multiActions or table.empty(multiActions) then return nil end
+	local bestAction = nil
+	local closestAction = nil
+	local closestTime = math.huge
+	local firstValid = nil
+
+	for i, data in ipairs(multiActions) do
+		if not data or table.empty(data) then goto continue end
+
+		if data["chatText"] then
+			local spellData = Spells.getSpellDataByParamWords(data["chatText"]:lower())
+			if spellData then
+				if not playerCanUseSpellLocal(spellData) then
+					firstValid = firstValid or data
+					goto continue
+				end
+				firstValid = firstValid or data
+				local remaining = math.max(getSpellCooldownRemaining(spellData.id), getSpellGroupCooldownRemaining(spellData))
+				if remaining <= 0 then bestAction = bestAction or data
+				elseif remaining < closestTime then closestTime = remaining; closestAction = data end
+			else
+				firstValid = firstValid or data
+				bestAction = bestAction or data
+			end
+		elseif data["useObject"] then
+			local itemId = data["useObject"]
+			local upgradeTier = data["upgradeTier"] or 0
+			local itemCount = player and player:getInventoryCount(itemId, upgradeTier) or 0
+			firstValid = firstValid or data
+			local runeData = Spells.getRuneSpellByItem and Spells.getRuneSpellByItem(itemId)
+			if runeData and itemCount > 0 then
+				local remaining = math.max(getSpellCooldownRemaining(runeData.id), getSpellGroupCooldownRemaining(runeData))
+				if remaining <= 0 then bestAction = bestAction or data
+				elseif remaining < closestTime then closestTime = remaining; closestAction = data end
+			elseif itemCount > 0 then
+				bestAction = bestAction or data
+			end
+		end
+		::continue::
+	end
+	return bestAction or closestAction or firstValid
+end
+
+local function renderSlotOnWidget(widget, slotData, isMainButton)
+	if not widget or not slotData or table.empty(slotData) then return end
+
+	if slotData["useObject"] then
+		if isMainButton then
+			widget.cache.isSpell = false
+			widget.cache.isRuneSpell = false
+			widget.cache.spellID = 0
+			widget.cache.spellData = nil
+			widget.item.text:setImageSource("")
+			widget.item.text:setText("")
+		end
+		widget.item:setItemId(slotData["useObject"], true)
+		widget.item:setOn(true)
+		widget.cache.itemId = slotData["useObject"]
+		widget.cache.upgradeTier = slotData["upgradeTier"] or 0
+		widget.cache.smartMode = slotData["useEquipSmartMode"] or false
+		local useTypeName = localGetActionName(slotData["useType"]) or "Use"
+		widget.cache.actionType = UseTypes[useTypeName] or UseTypes["Use"]
+		local itemCount = player and player:getInventoryCount(widget.cache.itemId, widget.cache.upgradeTier) or 0
+		widget.item:setItemCount(itemCount)
+		if widget.cache.actionType == UseTypes["Equip"] then
+			local equipped = player and player:hasEquippedItemId(widget.cache.itemId, widget.cache.upgradeTier)
+			widget.item:setChecked(itemCount ~= 0 and equipped)
+		end
+		local runeSpellData = Spells.getRuneSpellByItem and Spells.getRuneSpellByItem(widget.cache.itemId)
+		if runeSpellData then
+			widget.cache.isRuneSpell = true
+			widget.cache.spellData = runeSpellData
+		end
+	elseif slotData["chatText"] then
+		local spellData, param = Spells.getSpellDataByParamWords(slotData["chatText"]:lower())
+		if spellData then
+			local spellId = spellData.clientId
+			if spellId and SpelllistSettings then
+				local source = SpelllistSettings['Default'].iconFile
+				local clip = Spells.getImageClip(spellId, 'Default')
+				widget.item.text:setText("")
+				widget.item.text:setImageSource(source)
+				widget.item.text:setImageClip(clip)
+			end
+			widget.cache.isSpell = true
+			widget.cache.spellID = spellData.id
+			widget.cache.spellData = spellData
+			widget.cache.isRuneSpell = false
+			if param then widget.cache.castParam = param:gsub('"', '') end
+		else
+			widget.cache.isSpell = false
+			widget.cache.isRuneSpell = false
+			widget.item.text:setImageSource("")
+			widget.item.text:setText(slotData["chatText"]:sub(1, 15))
+		end
+		widget.item:setOn(true)
+		widget.cache.param = slotData["chatText"]
+		widget.cache.sendAutomatic = slotData["sendAutomatically"]
+		widget.cache.actionType = UseTypes["chatText"]
+	end
+	setupButtonTooltip(widget, false)
+end
+
+function updateMultiButtonState(button)
+	if not button or not button.item or not player or not button.cache then return end
+	if not button.cache.multiActions or not hasMultiActions(button.cache.multiActions) then
+		if button.cache.multiActions then button.cache.multiActions = {{}, {}, {}} end
+		return
+	end
+	local action = findNextAvailableAction(button.cache.multiActions)
+	if not action then action = button.cache.multiActions[1] end
+	if not action or table.empty(action) then return end
+
+	if action["chatText"] and button.cache.param == action["chatText"] and button.cache.sendAutomatic == action["sendAutomatically"] and button.cache.actionType == UseTypes["chatText"] then return end
+	if action["useObject"] and button.cache.itemId == action["useObject"] then
+		local useTypeName = localGetActionName(action["useType"]) or "Use"
+		if button.cache.actionType == (UseTypes[useTypeName] or UseTypes["Use"]) then return end
+	end
+
+	removeCooldown(button)
+	renderSlotOnWidget(button, action, true)
+	cacheMultiActionButtons[button] = true
+end
+
+function scheduleMultiActionCooldownEvent(button, eventKey, delay)
+	if not button or not eventKey or not delay then return end
+	local buttonId = button:getId()
+	if not multiActionCooldownEvents[buttonId] then multiActionCooldownEvents[buttonId] = {} end
+	if multiActionCooldownEvents[buttonId][eventKey] then removeEvent(multiActionCooldownEvents[buttonId][eventKey]) end
+	multiActionCooldownEvents[buttonId][eventKey] = scheduleEvent(function()
+		if button and not button:isDestroyed() then updateMultiButtonState(button) end
+		if multiActionCooldownEvents[buttonId] then multiActionCooldownEvents[buttonId][eventKey] = nil end
+	end, delay + 100)
+end
+
+function getMultiActionLayout(barN)
+	barN = tonumber(barN) or 1
+	if barN >= 1 and barN <= 3 then return "BottomMultiAction"
+	elseif barN >= 4 and barN <= 6 then return "LeftMultiAction"
+	else return "RightMultiAction" end
+end
+
+function getMultiActionPosition(button)
+	local actionbar = button:getParent():getParent()
+	local barN = actionbar and actionbar.n or 1
+	if barN >= 1 and barN <= 3 then
+		return topoint(string.format("%s %s", button:getX() - 29, button:getY() - 116))
+	elseif barN >= 4 and barN <= 6 then
+		return topoint(string.format("%s %s", button:getX() + 34, button:getY() - 29))
+	else
+		return topoint(string.format("%s %s", button:getX() - 116, button:getY() - 29))
+	end
+end
+
+function closeCurrentMultiActionPanel()
+	if multiPanel then
+		local refButton = multiPanel.button
+		if refButton then
+			refButton.onGeometryChange = nil
+			refButton.onVisibilityChange = nil
+			refButton.multiPanel = nil
+		end
+		if gameRootPanel then
+			gameRootPanel.onMouseRelease = multiPanel.prevMouseReleaseHandler
+		end
+		if not multiPanel:isDestroyed() then multiPanel:destroy() end
+		multiPanel = nil
+	end
+end
+
+function assignMultiAction(button, skipPrefill)
+	if not button then return end
+	local actionbar = button:getParent():getParent()
+	local barN = actionbar and actionbar.n or 1
+
+	if not multiPanel or multiPanel:isDestroyed() or multiPanel.button ~= button then
+		if multiPanel and not multiPanel:isDestroyed() then
+			if multiPanel.button then
+				multiPanel.button.onGeometryChange = nil
+				multiPanel.button.onVisibilityChange = nil
+				multiPanel.button.multiPanel = nil
+			end
+			if gameRootPanel then
+				gameRootPanel.onMouseRelease = multiPanel.prevMouseReleaseHandler
+			end
+			multiPanel:destroy()
+		end
+
+		multiPanel = g_ui.createWidget(getMultiActionLayout(barN), gameRootPanel)
+		button.multiPanel = multiPanel
+		multiPanel.button = button
+
+		local prevHandler = gameRootPanel.onMouseRelease
+		multiPanel.prevMouseReleaseHandler = prevHandler
+		gameRootPanel.onMouseRelease = function(self, mousePos, mouseButton)
+			if mouseButton == MouseRightButton then
+				if prevHandler then return prevHandler(self, mousePos, mouseButton) end
+				return false
+			end
+			if multiPanel and not multiPanel:isDestroyed() and not multiPanel:containsPoint(mousePos) then
+				closeCurrentMultiActionPanel()
+			end
+			if prevHandler then return prevHandler(self, mousePos, mouseButton) end
+			return false
+		end
+
+		button.onGeometryChange = function()
+			if not multiPanel or multiPanel:isDestroyed() then
+				button.onGeometryChange = nil
+				button.onVisibilityChange = nil
+				return
+			end
+			multiPanel:setPosition(getMultiActionPosition(button))
+		end
+		button.onVisibilityChange = function()
+			if not multiPanel or multiPanel:isDestroyed() then return end
+			if not button:isVisible() then closeCurrentMultiActionPanel() end
+		end
+		multiPanel:setPosition(getMultiActionPosition(button))
+	end
+
+	local cache = getButtonCache(button)
+	if not cache.multiActions or table.empty(cache.multiActions) then
+		cache.multiActions = {{}, {}, {}}
+	end
+
+	local barID, buttonID = splitButtonId(button)
+	if not skipPrefill then
+		local allEmpty = true
+		for i = 1, 3 do
+			if not table.empty(cache.multiActions[i] or {}) then allEmpty = false; break end
+		end
+		if allEmpty then
+			if cache.param and cache.param ~= "" then
+				cache.multiActions[1] = {chatText = cache.param, sendAutomatically = cache.sendAutomatic}
+				clearSingleCache(button)
+			elseif cache.itemId and cache.itemId > 100 then
+				local useType = localGetActionName(cache.actionType) or "Use"
+				cache.multiActions[1] = {useObject = cache.itemId, useType = useType, upgradeTier = cache.upgradeTier or 0, useEquipSmartMode = cache.smartMode or false}
+				clearSingleCache(button)
+			end
+		end
+	end
+
+	for k = 1, 3 do
+		local slotBtn = multiPanel:recursiveGetChildById("actionButton" .. k)
+		if slotBtn then
+			local data = cache.multiActions[k] or {}
+			resetButtonCache(slotBtn)
+			slotBtn.cache = getButtonCache(slotBtn)
+
+			slotBtn.onMouseRelease = function(self, mousePos, mouseBtn)
+				local current = cache.multiActions[k]
+				if mouseBtn == MouseRightButton then
+					local menu = g_ui.createWidget('PopupMenu')
+					menu:setGameMenu(true)
+					menu:addOption(tr('Assign Spell'), function() assignMultiActionSpell(button, k) end)
+					if slotBtn.item and slotBtn.item:getItemId() > 100 then
+						menu:addOption(tr('Edit Object'), function()
+							assignMultiItem(button, k, slotBtn.item:getItemId(), 0, false)
+						end)
+					else
+						menu:addOption(tr('Assign Object'), function() assignItemEvent(button, k) end)
+					end
+					local hasText = slotBtn.item and slotBtn.item.text and slotBtn.item.text:getText():len() > 0
+					menu:addOption(hasText and tr('Edit Text') or tr('Assign Text'), function() assignMultiText(button, k) end)
+					if current and not table.empty(current) then
+						menu:addSeparator()
+						menu:addOption(tr('Clear Action'), function()
+							cache.multiActions[k] = {}
+							if not hasMultiActions(cache.multiActions) then
+								cache.multiActions = {{}, {}, {}}
+								cacheMultiActionButtons[button] = nil
+								closeCurrentMultiActionPanel()
+								clearButton(button, false)
+							else
+								assignMultiAction(button, true)
+								updateMultiButtonState(button)
+							end
+						end)
+					end
+					menu:display(mousePos)
+				elseif mouseBtn == MouseLeftButton then
+					if current and not table.empty(current) then
+						executeMultiAction(button, current)
+					end
+				end
+			end
+
+			if not table.empty(data) then renderSlotOnWidget(slotBtn, data, false) end
+		end
+	end
+end
+
+function executeMultiAction(button, data)
+	if not player or not data or not next(data) then return end
+	if data.useObject then
+		local at = UseTypes[data.useType] or UseTypes["Use"]
+		if at == UseTypes["UseOnYourself"] then
+			g_game.useInventoryItemWith(data.useObject, player)
+		elseif at == UseTypes["UseOnTarget"] then
+			local tgt = g_game.getAttackingCreature()
+			if tgt then g_game.useInventoryItemWith(data.useObject, tgt) end
+		elseif at == UseTypes["Equip"] then
+			g_game.equipItem(Item.create(data.useObject))
+		elseif at == UseTypes["SelectUseTarget"] then
+			modules.game_interface.startUseWith(Item.create(data.useObject))
+		else
+			g_game.useInventoryItem(data.useObject)
+		end
+	elseif data.chatText then
+		if data.sendAutomatically then
+			g_game.talk(data.chatText)
+		else
+			modules.game_console.getConsole():setText(data.chatText)
+			modules.game_console.getConsole():setCursorPos(#data.chatText)
+		end
+	end
+end
+
+function clearSingleCache(button)
+	local cache = getButtonCache(button)
+	cache.param = ""
+	cache.sendAutomatic = false
+	cache.itemId = 0
+	cache.actionType = 0
+	cache.upgradeTier = 0
+	cache.smartMode = false
+end
+
+function assignMultiActionSpell(button, multiButtonIndex)
+	assignSpell(button, multiButtonIndex)
+end
+
+function assignMultiText(button, multiButtonIndex)
+	getButtonCache(button).multiSlotIndex = multiButtonIndex
+	assignText(button)
+end
+
+function assignMultiItem(button, multiButtonIndex, itemId, itemTier, dragEvent)
+	getButtonCache(button).multiSlotIndex = multiButtonIndex
+	assignItem(button, itemId, itemTier or 0, dragEvent)
+end
+
+function toggleMultiActionPanel(button)
+	if multiPanel and not multiPanel:isDestroyed() and multiPanel.button == button then
+		closeCurrentMultiActionPanel()
+		return
+	end
+	assignMultiAction(button, false)
+end
+
+function handleMultiSlotSave(button)
+	local cache = getButtonCache(button)
+	if not cache.multiSlotIndex or cache.multiSlotIndex < 1 then return end
+	local slotIdx = cache.multiSlotIndex
+	if not cache.multiActions then cache.multiActions = {{}, {}, {}} end
+
+	if cache.itemId and cache.itemId > 100 then
+		cache.multiActions[slotIdx] = {
+			useObject = cache.itemId,
+			useType = localGetActionName(cache.actionType) or "Use",
+			upgradeTier = cache.upgradeTier or 0,
+			useEquipSmartMode = cache.smartMode or false,
+		}
+	elseif cache.param and cache.param ~= "" then
+		cache.multiActions[slotIdx] = {
+			chatText = cache.param,
+			sendAutomatically = cache.sendAutomatic or false,
+		}
+	end
+
+	cache.multiSlotIndex = 0
+	if multiPanel and multiPanel.button == button then
+		assignMultiAction(button, true)
+	end
+	updateMultiButtonState(button)
 end
