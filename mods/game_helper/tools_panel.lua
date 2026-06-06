@@ -628,7 +628,7 @@ local QUIVER_REFILL_COOLDOWN_MS = 500
 function tools.clampQuiverMin(newMin, currentRefillValue)
   if not newMin or newMin < 1 then return 1 end
   if currentRefillValue and newMin >= currentRefillValue then
-    return currentRefillValue - 1
+    return math.max(1, currentRefillValue - 1)
   end
   return newMin
 end
@@ -1180,12 +1180,12 @@ end
 
 -- Getter for exercise dummies
 function tools.getExerciseDummies()
-  return exerciseDummies
+  return ExerciseDummies
 end
 
 -- Getter for exercise items
 function tools.getExercises()
-  return exercises
+  return ExerciseIds
 end
 
 -- Getter for toolsPanel
