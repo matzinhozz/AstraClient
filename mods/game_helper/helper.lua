@@ -642,21 +642,25 @@ local bothCastTypeSpells = {
 --             HelperSpellData.getHasteWhiteList()
 
 -- Converte diferentes representações de vocação em um ID padronizado
--- Retornos esperados: 0=rook, 5=MS, 6=ED, 7=RP, 8=EK, 9=EM (custom)
+-- Retornos: 0=rook, 1=Knight, 2=Paladin, 3=Sorcerer, 4=Druid, 5=Monk
 function translateVocation(v)
   local map = {
     [0] = 0,
-    [1] = 1,
+    [4] = 1,
+    [8] = 1,
     [11] = 1, -- Knight + EK
-    [2] = 2,
+    [3] = 2,
+    [7] = 2,
     [12] = 2, -- Paladin + RP
-    [3] = 3,
+    [1] = 3,
+    [5] = 3,
     [13] = 3, -- Sorcerer + MS
-    [4] = 4,
+    [2] = 4,
+    [6] = 4,
     [14] = 4, -- Druid + ED
-    [5] = 5,
+    [9] = 5,
+    [10] = 5,
     [15] = 5, -- Monk + promo
-    [9] = 9,  -- EM/custom se usar
   }
 
   if type(v) == 'number' then
@@ -6237,7 +6241,7 @@ end
 
 function onSetupDropSpell(button, spellData, groups, tableToAssign)
   local groupIds = Spells.getGroupIds(spellData)
-  local playerVocation = translateVocation(player:getVocation())
+  local playerVocation = player:getVocation()
   local profile = getShooterProfile()
 
   if containsAnyGroup(groupIds, groups) and table.contains(spellData.vocations, playerVocation) and not HelperSpellData.getIgnoredSpellsIds()[spellData.id] then

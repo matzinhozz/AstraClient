@@ -389,7 +389,7 @@ _Helper.AutoHaste.onSetupDropSupport = function(widget, spellData)
   local helperConfig = _Helper.getHelperConfig and _Helper.getHelperConfig()
   if not helperConfig then return end
 
-  if table.contains(spellData.vocations, playerVocation) then
+  if table.contains(spellData.vocations, player:getVocation()) then
     _Helper.setSpellIcon(widget, spellData.id)
     widget:setBorderColorTop("#1b1b1b")
     widget:setBorderColorLeft("#1b1b1b")
