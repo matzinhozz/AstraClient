@@ -17,7 +17,11 @@ acceptedLoot = nil
 
 allContainers = {}
 obtainContainers = {}
-lootData = {}
+lootData = {
+  listType = "blacklist",
+  blacklistTypes = {},
+  whitelistTypes = {}
+}
 
 local cache = {
   listMin = 0,
@@ -174,6 +178,9 @@ local function refreshList()
 end
 
 function showQuickLoot()
+  updateLootItems()
+  refreshList()
+  addEvent(refreshList, 300)
   quickLootWindow.searchText:clearText()
   scrollBar:setValue(0)
   quickLootWindow:show(true)
@@ -290,7 +297,12 @@ function addToQuickLoot(clientId)
   local lootTable = (lootConfig == "whitelist" and lootData["whitelistTypes"] or lootData["blacklistTypes"])
   local filter = lootConfig == "whitelist"
   if not lootTable then
-    return
+    lootTable = {}
+    if lootConfig == "whitelist" then
+      lootData.whitelistTypes = lootTable
+    else
+      lootData.blacklistTypes = lootTable
+    end
   end
 
   if table.contains(lootTable, clientId) then
