@@ -903,11 +903,34 @@ function updateButton(button)
       return false
     end
 
+	closeCurrentMultiActionPanel()
 	button.cooldown:setBorderWidth(1)
     button.cache.isDragging = true
 	dragButton = button
 	dragItem = self
     onDragItem(self, mousePos)
+    return true
+  end
+
+  button.item.onDragMove = function(self, mousePos, mouseMoved)
+    self:setX(mousePos.x)
+    self:setY(mousePos.y)
+
+    if lastHighlightWidget then
+      lastHighlightWidget:setBorderWidth(0)
+      lastHighlightWidget:setBorderColor('alpha')
+    end
+
+    local clickedWidget = gameRootPanel:recursiveGetChildByPos(mousePos, false)
+    if clickedWidget and clickedWidget:backwardsGetWidgetById("tabBar") then
+      lastHighlightWidget = clickedWidget
+      lastHighlightWidget:setBorderWidth(1)
+      lastHighlightWidget:setBorderColor('white')
+    else
+      lastHighlightWidget = nil
+    end
+
+    return true
   end
 
   button.item.onDragLeave = function(self, widget, mousePos)
@@ -920,6 +943,7 @@ function updateButton(button)
     isLoaded = true
 	dragButton = nil
 	dragItem = nil
+    return true
   end
 
   button.item.onClick = function() onExecuteAction(button) end
@@ -1328,6 +1352,19 @@ function onExecuteAction(button, isPress)
   	modules.game_console.getConsole():setText(button.cache.param)
   	modules.game_console.getConsole():setCursorPos(#button.cache.param)
   end
+
+  if cacheMultiActionButtons[button] and button.cache.multiActions then
+    local actions = button.cache.multiActions
+    for i = 2, 3 do
+      if actions[i] and not table.empty(actions[i]) then
+        scheduleEvent(function()
+          if button and not button:isDestroyed() then
+            executeMultiAction(button, actions[i])
+          end
+        end, 500 * (i - 1))
+      end
+    end
+  end
 end
 
 function onCheckKeyUp(button)
@@ -1337,7 +1374,10 @@ function onCheckKeyUp(button)
 	end
 end
 
-function assignItemEvent(button)
+function assignItemEvent(button, multiSlotIndex)
+	if multiSlotIndex then
+		getButtonCache(button).multiSlotIndex = multiSlotIndex
+	end
 	g_mouse.updateGrabber(mouseGrabberWidget, 'target')
 	mouseGrabberWidget:grabMouse()
 	g_mouse.pushCursor('target')
@@ -1517,8 +1557,14 @@ function assignSpell(button, multiSlotIndex)
 			param = param .. ' "' .. paramText:gsub('"', '') .. '"'
 		end
 
+		local savedMultiSlotIndex = button.cache and button.cache.multiSlotIndex
+		local savedMultiActions = button.cache and button.cache.multiActions
+
 		Options.createOrUpdateText(tonumber(barID), tonumber(buttonID), param, true)
 		updateButton(button)
+
+		if savedMultiSlotIndex then button.cache.multiSlotIndex = savedMultiSlotIndex end
+		if savedMultiActions then button.cache.multiActions = savedMultiActions end
 		handleMultiSlotSave(button)
 
 		if destroy then
@@ -1566,8 +1612,14 @@ function assignText(button)
 		local text = window.contentPanel.text:getText()
 		local fomartedText = Spells.getSpellFormatedName(text)
 		local barID, buttonID = string.match(button:getId(), "(.*)%.(.*)")
+		local savedMultiSlotIndex = button.cache and button.cache.multiSlotIndex
+		local savedMultiActions = button.cache and button.cache.multiActions
+
 		Options.createOrUpdateText(tonumber(barID), tonumber(buttonID), fomartedText, autoSay)
 		updateButton(button)
+
+		if savedMultiSlotIndex then button.cache.multiSlotIndex = savedMultiSlotIndex end
+		if savedMultiActions then button.cache.multiActions = savedMultiActions end
 		handleMultiSlotSave(button)
 
 		if destroy then
@@ -1742,7 +1794,13 @@ function assignItem(button, itemId, itemTier, dragEvent)
 		end
 
 		Options.createOrUpdateAction(tonumber(barID), tonumber(buttonID), selected, itemId, itemTier, smartMode)
+
+		local savedMultiSlotIndex = button.cache and button.cache.multiSlotIndex
+		local savedMultiActions = button.cache and button.cache.multiActions
 		updateButton(button)
+
+		if savedMultiSlotIndex then button.cache.multiSlotIndex = savedMultiSlotIndex end
+		if savedMultiActions then button.cache.multiActions = savedMultiActions end
 		handleMultiSlotSave(button)
 
 		if destroy then
@@ -2846,7 +2904,6 @@ end
 function updateMultiButtonState(button)
 	if not button or not button.item or not player or not button.cache then return end
 	if not button.cache.multiActions or not hasMultiActions(button.cache.multiActions) then
-		if button.cache.multiActions then button.cache.multiActions = {{}, {}, {}} end
 		return
 	end
 	local action = findNextAvailableAction(button.cache.multiActions)
@@ -3071,11 +3128,43 @@ function clearSingleCache(button)
 end
 
 function assignMultiActionSpell(button, multiButtonIndex)
+	local slotData = button.cache.multiActions[multiButtonIndex]
+	if slotData and not table.empty(slotData) then
+		if slotData.chatText then
+			button.cache.param = slotData.chatText
+			button.cache.sendAutomatic = slotData.sendAutomatically or false
+			local spellData, param = Spells.getSpellDataByParamWords(slotData.chatText:lower())
+			if spellData then
+				button.cache.spellData = spellData
+				button.cache.isSpell = true
+				button.cache.castParam = param and param:gsub('"', '') or ""
+			end
+		elseif slotData.useObject then
+			button.cache.itemId = slotData.useObject
+			button.cache.upgradeTier = slotData.upgradeTier or 0
+			button.cache.actionType = UseTypes[slotData.useType] or UseTypes["Use"]
+		end
+	else
+		button.cache.param = ""
+		button.cache.sendAutomatic = false
+		button.cache.spellData = nil
+		button.cache.isSpell = false
+		button.cache.castParam = ""
+		button.cache.itemId = 0
+	end
 	assignSpell(button, multiButtonIndex)
 end
 
 function assignMultiText(button, multiButtonIndex)
 	getButtonCache(button).multiSlotIndex = multiButtonIndex
+	local slotData = button.cache.multiActions[multiButtonIndex]
+	if slotData and not table.empty(slotData) and slotData.chatText then
+		button.cache.param = slotData.chatText
+		button.cache.sendAutomatic = slotData.sendAutomatically or false
+	else
+		button.cache.param = ""
+		button.cache.sendAutomatic = false
+	end
 	assignText(button)
 end
 
