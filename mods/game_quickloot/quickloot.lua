@@ -146,7 +146,11 @@ function terminate()
   quickLootContainersPanel = nil
   clearLootButton = nil
   addToButton = nil
-  lootData = {}
+  lootData = {
+    listType = "blacklist",
+    blacklistTypes = {},
+    whitelistTypes = {}
+  }
 
   if mouseGrabberWidget then
     mouseGrabberWidget:destroy()
@@ -180,9 +184,12 @@ end
 function showQuickLoot()
   updateLootItems()
   refreshList()
-  addEvent(refreshList, 300)
+  addEvent(function()
+    if quickLootWindow and quickLootWindow:isVisible() then
+      refreshList()
+    end
+  end, 300)
   quickLootWindow.searchText:clearText()
-  scrollBar:setValue(0)
   quickLootWindow:show(true)
   quickLootWindow:focus()
   g_client.setInputLockWidget(quickLootWindow)
