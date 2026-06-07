@@ -1357,11 +1357,12 @@ function onExecuteAction(button, isPress)
     local actions = button.cache.multiActions
     for i = 2, 3 do
       if actions[i] and not table.empty(actions[i]) then
+        local snappedAction = actions[i]
         scheduleEvent(function()
           if button and not button:isDestroyed() then
-            executeMultiAction(button, actions[i])
+            executeMultiAction(button, snappedAction)
           end
-        end, 500 * (i - 1))
+        end, MULTI_ACTION_DELAY_MS * (i - 1))
       end
     end
   end
@@ -1533,6 +1534,7 @@ function assignSpell(button, multiSlotIndex)
 
   local cancelFunc = function()
 		g_client.setInputLockWidget(nil)
+		updateButton(button)
 		window:destroy()
 	end
 
@@ -1557,14 +1559,12 @@ function assignSpell(button, multiSlotIndex)
 			param = param .. ' "' .. paramText:gsub('"', '') .. '"'
 		end
 
-		local savedMultiSlotIndex = button.cache and button.cache.multiSlotIndex
-		local savedMultiActions = button.cache and button.cache.multiActions
+		local savedMultiSlotIndex, savedMultiActions = saveMultiState(button)
 
 		Options.createOrUpdateText(tonumber(barID), tonumber(buttonID), param, true)
 		updateButton(button)
 
-		if savedMultiSlotIndex then button.cache.multiSlotIndex = savedMultiSlotIndex end
-		if savedMultiActions then button.cache.multiActions = savedMultiActions end
+		restoreMultiState(button, savedMultiSlotIndex, savedMultiActions)
 		handleMultiSlotSave(button)
 
 		if destroy then
@@ -1612,14 +1612,12 @@ function assignText(button)
 		local text = window.contentPanel.text:getText()
 		local fomartedText = Spells.getSpellFormatedName(text)
 		local barID, buttonID = string.match(button:getId(), "(.*)%.(.*)")
-		local savedMultiSlotIndex = button.cache and button.cache.multiSlotIndex
-		local savedMultiActions = button.cache and button.cache.multiActions
+		local savedMultiSlotIndex, savedMultiActions = saveMultiState(button)
 
 		Options.createOrUpdateText(tonumber(barID), tonumber(buttonID), fomartedText, autoSay)
 		updateButton(button)
 
-		if savedMultiSlotIndex then button.cache.multiSlotIndex = savedMultiSlotIndex end
-		if savedMultiActions then button.cache.multiActions = savedMultiActions end
+		restoreMultiState(button, savedMultiSlotIndex, savedMultiActions)
 		handleMultiSlotSave(button)
 
 		if destroy then
@@ -1795,12 +1793,10 @@ function assignItem(button, itemId, itemTier, dragEvent)
 
 		Options.createOrUpdateAction(tonumber(barID), tonumber(buttonID), selected, itemId, itemTier, smartMode)
 
-		local savedMultiSlotIndex = button.cache and button.cache.multiSlotIndex
-		local savedMultiActions = button.cache and button.cache.multiActions
+		local savedMultiSlotIndex, savedMultiActions = saveMultiState(button)
 		updateButton(button)
 
-		if savedMultiSlotIndex then button.cache.multiSlotIndex = savedMultiSlotIndex end
-		if savedMultiActions then button.cache.multiActions = savedMultiActions end
+		restoreMultiState(button, savedMultiSlotIndex, savedMultiActions)
 		handleMultiSlotSave(button)
 
 		if destroy then
@@ -2736,6 +2732,17 @@ end
 multiPanel = nil
 cacheMultiActionButtons = {}
 multiActionCooldownEvents = {}
+local MULTI_ACTION_DELAY_MS = 500
+
+local function saveMultiState(button)
+	return button.cache and button.cache.multiSlotIndex,
+	       button.cache and button.cache.multiActions
+end
+
+local function restoreMultiState(button, slotIndex, actions)
+	if slotIndex ~= nil then button.cache.multiSlotIndex = slotIndex end
+	if actions ~= nil then button.cache.multiActions = actions end
+end
 
 local function hasMultiActions(multiActions)
 	if not multiActions then return false end
