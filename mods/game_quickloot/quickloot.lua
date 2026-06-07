@@ -17,7 +17,11 @@ acceptedLoot = nil
 
 allContainers = {}
 obtainContainers = {}
-lootData = {}
+lootData = {
+  listType = "blacklist",
+  blacklistTypes = {},
+  whitelistTypes = {}
+}
 
 local cache = {
   listMin = 0,
@@ -142,7 +146,11 @@ function terminate()
   quickLootContainersPanel = nil
   clearLootButton = nil
   addToButton = nil
-  lootData = {}
+  lootData = {
+    listType = "blacklist",
+    blacklistTypes = {},
+    whitelistTypes = {}
+  }
 
   if mouseGrabberWidget then
     mouseGrabberWidget:destroy()
@@ -174,8 +182,14 @@ local function refreshList()
 end
 
 function showQuickLoot()
+  updateLootItems()
+  refreshList()
+  addEvent(function()
+    if quickLootWindow and quickLootWindow:isVisible() then
+      refreshList()
+    end
+  end, 300)
   quickLootWindow.searchText:clearText()
-  scrollBar:setValue(0)
   quickLootWindow:show(true)
   quickLootWindow:focus()
   g_client.setInputLockWidget(quickLootWindow)
@@ -290,7 +304,12 @@ function addToQuickLoot(clientId)
   local lootTable = (lootConfig == "whitelist" and lootData["whitelistTypes"] or lootData["blacklistTypes"])
   local filter = lootConfig == "whitelist"
   if not lootTable then
-    return
+    lootTable = {}
+    if lootConfig == "whitelist" then
+      lootData.whitelistTypes = lootTable
+    else
+      lootData.blacklistTypes = lootTable
+    end
   end
 
   if table.contains(lootTable, clientId) then
