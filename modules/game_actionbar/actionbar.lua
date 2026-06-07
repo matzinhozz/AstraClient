@@ -1376,9 +1376,7 @@ function onCheckKeyUp(button)
 end
 
 function assignItemEvent(button, multiSlotIndex)
-	if multiSlotIndex then
-		getButtonCache(button).multiSlotIndex = multiSlotIndex
-	end
+	getButtonCache(button).multiSlotIndex = multiSlotIndex or nil
 	g_mouse.updateGrabber(mouseGrabberWidget, 'target')
 	mouseGrabberWidget:grabMouse()
 	g_mouse.pushCursor('target')
@@ -1417,9 +1415,7 @@ function onAssignItem(self, mousePosition, mouseButton, button)
 end
 
 function assignSpell(button, multiSlotIndex)
-	if multiSlotIndex then
-		getButtonCache(button).multiSlotIndex = multiSlotIndex
-	end
+	getButtonCache(button).multiSlotIndex = multiSlotIndex or nil
 	local radio = UIRadioGroup.create()
 	window = g_ui.loadUI('spell', g_ui.getRootWidget())
 	window:show()
