@@ -4,20 +4,20 @@
 local CONTAINER_W = 420
 local CONTAINER_H = 110
 local ICON_SIZE = 72
-local ICON_X = 0
+local ICON_X = 16
 local ICON_Y = 8
 local PAPER_X = 52
 local PAPER_Y = 16
 local PAPER_W = 355
 local PAPER_H = 80
 local ANIM_W = 21
-local TITLE_X = 112
+local TITLE_X = 58
 local TITLE_Y = 22
 local TITLE_W = 235
-local TITLE_H = 24
-local DESC_X = 102
-local DESC_Y = 50
-local DESC_W = 255
+local TITLE_H = 18
+local DESC_X = 58
+local DESC_Y = 45
+local DESC_W = 235
 local DESC_H = 40
 local FRAME_MS = 40
 local HOLD_MS = 3500
@@ -145,18 +145,6 @@ local function createUI()
     ui.iconW:setHeight(ICON_SIZE)
     ui.iconW:setOpacity(0)
 
-    ui.titleShadow = g_ui.createWidget('UILabel', ui.container)
-    ui.titleShadow:addAnchor(AnchorLeft, 'parent', AnchorLeft)
-    ui.titleShadow:addAnchor(AnchorTop, 'parent', AnchorTop)
-    ui.titleShadow:setMarginLeft(TITLE_X + 1)
-    ui.titleShadow:setMarginTop(TITLE_Y + 1)
-    ui.titleShadow:setWidth(TITLE_W)
-    ui.titleShadow:setHeight(TITLE_H)
-    ui.titleShadow:setTextAlign(AlignCenter)
-    ui.titleShadow:setColor('#1a1a1a')
-    ui.titleShadow:setOpacity(0)
-    if ui.titleShadow.setFont then ui.titleShadow:setFont("Verdana Bold-11px") end
-
     ui.titleW = g_ui.createWidget('UILabel', ui.container)
     ui.titleW:addAnchor(AnchorLeft, 'parent', AnchorLeft)
     ui.titleW:addAnchor(AnchorTop, 'parent', AnchorTop)
@@ -167,19 +155,7 @@ local function createUI()
     ui.titleW:setTextAlign(AlignCenter)
     ui.titleW:setColor('#FFE1B5')
     ui.titleW:setOpacity(0)
-    if ui.titleW.setFont then ui.titleW:setFont("Verdana Bold-11px") end
-
-    ui.descShadow = g_ui.createWidget('UILabel', ui.container)
-    ui.descShadow:addAnchor(AnchorLeft, 'parent', AnchorLeft)
-    ui.descShadow:addAnchor(AnchorTop, 'parent', AnchorTop)
-    ui.descShadow:setMarginLeft(DESC_X + 1)
-    ui.descShadow:setMarginTop(DESC_Y + 1)
-    ui.descShadow:setWidth(DESC_W)
-    ui.descShadow:setHeight(DESC_H)
-    ui.descShadow:setTextAlign(AlignTopCenter)
-    ui.descShadow:setColor('#1a1a1a')
-    ui.descShadow:setOpacity(0)
-    if ui.descShadow.setTextWrap then ui.descShadow:setTextWrap(true) end
+    if ui.titleW.setFont then ui.titleW:setFont("terminus-14px-bold") end
 
     ui.descW = g_ui.createWidget('UILabel', ui.container)
     ui.descW:addAnchor(AnchorLeft, 'parent', AnchorLeft)
@@ -188,7 +164,7 @@ local function createUI()
     ui.descW:setMarginTop(DESC_Y)
     ui.descW:setWidth(DESC_W)
     ui.descW:setHeight(DESC_H)
-    ui.descW:setTextAlign(AlignTopCenter)
+    ui.descW:setTextAlign(AlignCenter)
     ui.descW:setColor('#c0c0c0')
     ui.descW:setOpacity(0)
     if ui.descW.setTextWrap then ui.descW:setTextWrap(true) end
@@ -202,9 +178,7 @@ local function setPaperWidth(w)
 end
 
 local function setContentOpacity(op)
-    if ui.titleShadow then ui.titleShadow:setOpacity(op) end
     if ui.titleW then ui.titleW:setOpacity(op) end
-    if ui.descShadow then ui.descShadow:setOpacity(op) end
     if ui.descW then ui.descW:setOpacity(op) end
 end
 
@@ -228,9 +202,7 @@ local function processNext()
     ui.anim:setImageSource(OPEN_FRAMES[1])
     if ui.iconW and d.icon then ui.iconW:setImageSource(d.icon) end
     if ui.titleW    then ui.titleW:setText(d.title or "") end
-    if ui.titleShadow then ui.titleShadow:setText(d.title or "") end
     if ui.descW     then ui.descW:setText(d.desc or "") end
-    if ui.descShadow  then ui.descShadow:setText(d.desc or "") end
 
     state = "opening"
     animateOpen(d.holdMs)
