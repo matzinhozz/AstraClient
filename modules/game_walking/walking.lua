@@ -30,6 +30,18 @@ local data = {
   ["altCheckBox"] = {"Alt", "Ctrl+Alt"}
 }
 
+function setWalkDelayOption(key, value)
+  value = math.max(0, tonumber(value) or 0)
+
+  if key == 'walkTeleportDelay' then
+    walkTeleportDelay = value
+  elseif key == 'walkStairsDelay' then
+    walkStairsDelay = value
+  elseif key == 'walkTurnDelay' then
+    walkTurnDelay = value
+  end
+end
+
 function init()
   connect(g_game, {
     onTeleport = onTeleport
