@@ -434,11 +434,11 @@ function configureWidgetOnPanel(widget, panel)
   local emptySize = panel:getHeight() - childsSize
   if emptySize - widget:getHeight() >= 0 then
     widget:setParent(panel)
+    local oldOnClose = widget.onClose
     widget.onClose = function()
+      if oldOnClose then oldOnClose() end
       local panel = widget:getParent()
-      if panel then
-        panel:removeChild(widget)
-      end
+      if panel then panel:removeChild(widget) end
     end
     return true
   end
@@ -452,11 +452,11 @@ function configureWidgetOnPanel(widget, panel)
 
   if emptySize - minimus >= 0 then
     widget:setParent(panel)
+    local oldOnClose = widget.onClose
     widget.onClose = function()
+      if oldOnClose then oldOnClose() end
       local panel = widget:getParent()
-      if panel then
-        panel:removeChild(widget)
-      end
+      if panel then panel:removeChild(widget) end
     end
     return true
   end

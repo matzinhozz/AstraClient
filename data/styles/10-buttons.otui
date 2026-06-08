@@ -351,3 +351,19 @@ ClearSearch < UIWidget
   image-clip: 0 0 20 20
   $pressed:
     image-clip: 0 20 20 20
+
+MoveUpButton < UIButton
+  size: 15 15
+  image-source: /images/arrows/icon-arrow-up
+  image-clip: 0 0 15 15
+  image-color: #c0c0c0
+  $hover:
+    image-color: #ffffff
+
+MoveDownButton < UIButton
+  size: 15 15
+  image-source: /images/arrows/icon-arrow-down
+  image-clip: 0 0 15 15
+  image-color: #c0c0c0
+  $hover:
+    image-color: #ffffff

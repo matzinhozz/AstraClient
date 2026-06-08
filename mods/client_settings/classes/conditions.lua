@@ -650,7 +650,7 @@ function ConditionsHUD:configure()
             end
             widget.showInBarCheckBox:setChecked(ConditionsHUD.settings.visibleBar[condition:getId()] == nil and condition:isVisibleBar() or ConditionsHUD.settings.visibleBar[condition:getId()])
 
-            widget.bgcolor = i % 2 == 0 and "$var-textlist-even" or "$var-textlist-odd"
+            widget.bgcolor = i % 2 == 0 and "#414141" or "#484848"
             widget:setBackgroundColor(widget.bgcolor)
             ConditionsHUD.widgets[condition:getId()] = widget
 
@@ -1008,7 +1008,7 @@ function ConditionsHUD:updateOrder(reset)
         local widget = ConditionsHUD.widgets[condition:getId()]
         if widget then
             widget:getParent():moveChildToIndex(widget, condition:getIndex())
-            widget.bgcolor = i % 2 == 0 and "$var-textlist-even" or "$var-textlist-odd"
+            widget.bgcolor = i % 2 == 0 and "#414141" or "#484848"
             widget:setBackgroundColor(widget.bgcolor)
             if reset then
                 widget.showInHudCheckBox:setChecked(condition.visibleHud)
@@ -1434,7 +1434,7 @@ function ConditionsHUD:onFocusChanged(widget, focused)
 
     if widget then
         ConditionsHUD.selectedWidget = widget
-        ConditionsHUD.selectedWidget:setBackgroundColor("$var-textlist-selected")
+        ConditionsHUD.selectedWidget:setBackgroundColor("#585858")
 
         local hudWindow = GameOptions:getLoadedWindow("hud")
         if not hudWindow then

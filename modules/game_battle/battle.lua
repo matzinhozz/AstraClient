@@ -12,7 +12,6 @@ local battleUpdateEvent = nil
 local battleUpdateInterval = 300
 local battleAgeNumber = 1
 local battleAges = {}
-local lastCheckPosition = nil
 local hoveredCreature = nil
 local newHoveredCreature = nil
 local prevCreature = nil
@@ -33,8 +32,8 @@ local keybindOpenSecondaryBattle = KeyBind:getKeyBind("Windows", "Open secondary
 
 function init()
   g_ui.importStyle('battlebutton')
+  g_ui.importStyle('battle')
 
-  mainBattleWindow = g_ui.loadUI('battle', m_interface.getRightPanel())
   keybindOpenBattle:active()
   keybindOpenSecondaryBattle:active()
 
@@ -70,15 +69,15 @@ end
 
 function toggle()
   local mainBattle = getMainBattle().window
-  if modules.game_sidebuttons.isButtonVisible("battleListWidget") then
+  if mainBattle:isVisible() then
     mainBattle:close()
     modules.game_sidebuttons.setButtonVisible("battleListWidget", false)
   else
-    if m_interface.addToPanels(mainBattle) then
-      mainBattle:open()
-      modules.game_sidebuttons.setButtonVisible("battleListWidget", true)
-      mainBattle:getParent():moveChildToIndex(mainBattle, #mainBattle:getParent():getChildren())
+    if not mainBattle:getParent() then
+      m_interface.getRightPanel():addChild(mainBattle)
     end
+    mainBattle:open()
+    modules.game_sidebuttons.setButtonVisible("battleListWidget", true)
   end
 end
 
@@ -89,11 +88,11 @@ end
 
 function open()
   local mainBattle = getMainBattle().window
-  if m_interface.addToPanels(mainBattle) then
-    mainBattle:open()
-    mainBattle:getParent():moveChildToIndex(mainBattle, #mainBattle:getParent():getChildren())
-    modules.game_sidebuttons.setButtonVisible("battleListWidget", true)
+  if not mainBattle:getParent() then
+    m_interface.getRightPanel():addChild(mainBattle)
   end
+  mainBattle:open()
+  modules.game_sidebuttons.setButtonVisible("battleListWidget", true)
 end
 
 function onMiniWindowClose(window)
@@ -220,15 +219,6 @@ function updateBattleList()
   end
 
   battleUpdateEvent = scheduleEvent(updateBattleList, battleUpdateInterval)
-
-  local player = g_game.getLocalPlayer()
-  if not player then return end
-  local pos = player:getPosition()
-  -- Skip full scan if player hasn't moved
-  if lastCheckPosition and pos == lastCheckPosition then
-    return
-  end
-  lastCheckPosition = pos
   checkCreatures()
 end
 
@@ -408,13 +398,8 @@ local function updateBattleCreatures(battle, spectators, player)
   for i = #creatures + 1, maxCreatures do
     local button = buttons[i]
     if button then
-      if button.setCreature then
-        button:setCreature(nil)
-      else
-        button.creature = nil
-      end
+      button:setCreature(nil)
       button:hide()
-      button:setOn(false)
     end
   end
 

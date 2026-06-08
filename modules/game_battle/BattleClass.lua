@@ -114,7 +114,7 @@ function BattleClass:configure(windowId, window)
   end
 
   if isHidingFilters() then
-		hideFilterPanel()
+		hideFilterPanel(windowId)
   end
 
   local sortTypeBox = _filterPanel.sortPanel.sortTypeBox
