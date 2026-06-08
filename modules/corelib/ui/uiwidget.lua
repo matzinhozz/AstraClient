@@ -27,20 +27,23 @@ end
 
 function UIWidget:parseColoredText(text, default_color)
     default_color = default_color or "#ffffff"
-    local result, last_pos = "", 1
+    local result, last_pos = {}, 1
     for start, stop in text:gmatch("()%[color=#?%x+%]()") do
         if start > last_pos then
-            result = result .. "{" .. text:sub(last_pos, start - 1) .. ", " .. default_color .. "}"
+            table.insert(result, text:sub(last_pos, start - 1))
+            table.insert(result, default_color)
         end
         local closing_tag_start = text:find("%[/color%]", stop)
         if not closing_tag_start then break end
         local content = text:sub(stop, closing_tag_start - 1)
         local color = text:match("#%x+", start) or default_color
-        result = result .. "{" .. content .. ", " .. color .. "}"
+        table.insert(result, content)
+        table.insert(result, color)
         last_pos = closing_tag_start + 8
     end
     if last_pos <= #text then
-        result = result .. "{" .. text:sub(last_pos) .. ", " .. default_color .. "}"
+        table.insert(result, text:sub(last_pos))
+        table.insert(result, default_color)
     end
     self:setColoredText(result)
 end
