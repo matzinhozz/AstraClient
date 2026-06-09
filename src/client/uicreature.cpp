@@ -22,6 +22,7 @@
 
 #include "uicreature.h"
 #include "spritemanager.h"
+#include <framework/core/logger.h>
 #include <framework/otml/otml.h>
 #include <framework/graphics/drawqueue.h>
 
@@ -33,6 +34,13 @@ void UICreature::drawSelf(Fw::DrawPane drawPane)
     UIWidget::drawSelf(drawPane);
 
     if (m_creature) {
+        const auto outfit = m_creature->getOutfit();
+        if (outfit.getCategory() >= ThingLastCategory || (outfit.getId() == 0 && outfit.getAuxId() == 0)) {
+            g_logger.debug(stdext::format("Ignoring invalid UICreature outfit: category=%d, id=%d, auxId=%d, creatureId=%u, creatureName=%s",
+                                          static_cast<int>(outfit.getCategory()), outfit.getId(), outfit.getAuxId(), m_creature->getId(), m_creature->getName()));
+            return;
+        }
+
         if (m_autoRotating) {
             auto ticks = (g_clock.millis() % 4000) / 4;
             Otc::Direction new_dir;
