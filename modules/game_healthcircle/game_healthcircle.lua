@@ -618,6 +618,28 @@ function setDistanceFromCenter(value)
     g_settings.set('healthcircle_distfromcenter', value)
 end
 
+local arcStyleSizes = { "small", "", "large" }
+
+function setArcStyle(value)
+    local size = arcStyleSizes[value + 1] or ""
+    local prefix = size ~= "" and (size .. "-") or ""
+    local function setImages(widget, frontWidget, name)
+        if not widget then return end
+        widget:setImageSource("/data/images/game/healthcircle/" .. prefix .. name .. "_empty")
+        if frontWidget then
+            frontWidget:setImageSource("/data/images/game/healthcircle/" .. prefix .. name .. "_full")
+        end
+    end
+    setImages(healthCircle, healthCircleFront, "left")
+    setImages(manaCircle, manaCircleFront, "right")
+    setImages(expCircle, expCircleFront, "top")
+    setImages(skillCircle, skillCircleFront, "bottom")
+    imageSizeBroad = healthCircle:getHeight()
+    imageSizeThin = healthCircle:getWidth()
+    whenMapResizeChange()
+    g_settings.set('healthcircle_style', value)
+end
+
 function setCircleOpacity(value)
     healthCircle:setOpacity(value)
     healthCircleFront:setOpacity(value)

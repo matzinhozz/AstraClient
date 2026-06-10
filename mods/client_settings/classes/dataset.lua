@@ -843,7 +843,9 @@ return {
   sizeBox = {
 		value = 1,
         apply = function(value)
-            g_map.setArcStyle(value - 1)
+            if modules.game_healthcircle then
+                modules.game_healthcircle.setArcStyle(value - 1)
+            end
             if StatusIconBar and type(StatusIconBar.updatePosition) == 'function' then
                 StatusIconBar.updatePosition()
             end

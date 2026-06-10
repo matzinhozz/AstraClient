@@ -201,6 +201,8 @@ void Creature::drawInformation(const Point& point, bool useGray, const Rect& par
     if (g_game.getFeature(Otc::GameBlueNpcNameColor) && isNpc() && m_healthPercent == 100 && !useGray)
         fillColor = Color(0x66, 0xcc, 0xff);
 
+    Rect manaBgBase = backgroundRect;
+
     if (drawFlags & Otc::DrawBars && (!isNpc() || !g_game.getFeature(Otc::GameHideNpcNames))) {
         if (healthBar) {
             TexturePtr barTexture = healthBar->getTexture();
@@ -209,44 +211,6 @@ void Creature::drawInformation(const Point& point, bool useGray, const Rect& par
         }
         g_drawQueue->addFilledRect(backgroundRect, Color::black);
         g_drawQueue->addFilledRect(healthRect, fillColor);
-
-        if (drawFlags & Otc::DrawManaBar) {
-            int8 manaPercent = m_manaPercent;
-            if (isLocalPlayer()) {
-                LocalPlayerPtr player = g_game.getLocalPlayer();
-                if (player) {
-                    double maxMana = player->getMaxMana();
-                    if (maxMana == 0) {
-                        manaPercent = 100;
-                    } else {
-                        manaPercent = (player->getMana() * 100) / maxMana;
-                    }
-                }
-            }
-            if (manaPercent >= 0) {
-                backgroundRect.moveTop(backgroundRect.bottom());
-                if (healthBar) {
-                    backgroundRect.moveTop(backgroundRect.top() + healthBar->getBarOffset().y + 1);
-                }
-                if (manaBar) {
-                    if (!healthBar) {
-                        backgroundRect.moveTop(backgroundRect.top() + 1);
-                    }
-                    backgroundRect.setHeight(manaBar->getHeight());
-                    backgroundRect.moveTop(backgroundRect.top() + manaBar->getBarOffset().y);
-                    backgroundRect.moveLeft(backgroundRect.left() + manaBar->getBarOffset().x);
-
-                    TexturePtr barTexture = manaBar->getTexture();
-                    Rect barRect = Rect(backgroundRect.x() + manaBar->getOffset().x, backgroundRect.y() + manaBar->getOffset().y, barTexture->getSize());
-                    g_drawQueue->addTexturedRect(barRect, barTexture, Rect(0, 0, barTexture->getSize()));
-                }
-                g_drawQueue->addFilledRect(backgroundRect, Color::black);
-
-                Rect manaRect = backgroundRect.expanded(-1);
-                manaRect.setWidth(((float)manaPercent / 100.f) * 25);
-                g_drawQueue->addFilledRect(manaRect, Color::blue);
-            }
-        }
 
         if (getProgressBarPercent()) {
             backgroundRect.moveTop(backgroundRect.bottom());
@@ -258,6 +222,45 @@ void Creature::drawInformation(const Point& point, bool useGray, const Rect& par
             progressBarRect.setWidth(getProgressBarPercent() / (maxBar * 1.0) * 25);
 
             g_drawQueue->addFilledRect(progressBarRect, Color::white);
+        }
+    }
+
+    if (drawFlags & Otc::DrawManaBar) {
+        int8 manaPercent = m_manaPercent;
+        if (isLocalPlayer()) {
+            LocalPlayerPtr player = g_game.getLocalPlayer();
+            if (player) {
+                double maxMana = player->getMaxMana();
+                if (maxMana == 0) {
+                    manaPercent = 100;
+                } else {
+                    manaPercent = (player->getMana() * 100) / maxMana;
+                }
+            }
+        }
+        if (manaPercent >= 0) {
+            Rect manaBg = manaBgBase;
+            manaBg.moveTop(manaBg.bottom());
+            if (healthBar) {
+                manaBg.moveTop(manaBg.top() + healthBar->getBarOffset().y + 1);
+            }
+            if (manaBar) {
+                if (!healthBar) {
+                    manaBg.moveTop(manaBg.top() + 1);
+                }
+                manaBg.setHeight(manaBar->getHeight());
+                manaBg.moveTop(manaBg.top() + manaBar->getBarOffset().y);
+                manaBg.moveLeft(manaBg.left() + manaBar->getBarOffset().x);
+
+                TexturePtr barTexture = manaBar->getTexture();
+                Rect barRect = Rect(manaBg.x() + manaBar->getOffset().x, manaBg.y() + manaBar->getOffset().y, barTexture->getSize());
+                g_drawQueue->addTexturedRect(barRect, barTexture, Rect(0, 0, barTexture->getSize()));
+            }
+            g_drawQueue->addFilledRect(manaBg, Color::black);
+
+            Rect manaRect = manaBg.expanded(-1);
+            manaRect.setWidth(((float)manaPercent / 100.f) * 25);
+            g_drawQueue->addFilledRect(manaRect, Color::blue);
         }
     }
 

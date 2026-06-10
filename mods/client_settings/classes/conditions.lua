@@ -736,6 +736,7 @@ function ConditionsHUD:changeVisibilityInHud(id, visible)
     end
 
     condition:setVisibleHud(visible)
+    ConditionsHUD.settings.visibleHud[id] = visible
     -- notifier
     if visible and ConditionsHUD.actives[condition:getId()] then
         -- if condition is active, add it to the hud
@@ -775,6 +776,7 @@ function ConditionsHUD:changeVisibilityInBar(id, visible)
     end
 
     condition:setVisibleBar(visible)
+    ConditionsHUD.settings.visibleBar[id] = visible
     local removeNormalBattle = false
     -- notifier
     if visible and ConditionsHUD.actives[condition:getId()] then
