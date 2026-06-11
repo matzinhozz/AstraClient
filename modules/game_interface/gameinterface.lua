@@ -2272,6 +2272,32 @@ function onLoadHorizontalPanels(horizontalLeftOptions, horizontalRightOptions)
   end
 end
 
+local function callRestoredWidgetMethod(widget, methodName)
+  local method = widget[methodName]
+  if not method then return false end
+
+  local ok, err = pcall(method, widget)
+  if not ok and g_logger and g_logger.warning then
+    g_logger.warning(string.format("Failed to %s restored widget %s: %s", methodName, widget:getId() or '', tostring(err)))
+  end
+  return ok
+end
+
+local function closeRestoredWidget(widget, primordial)
+  if not widget or not widget:isVisible() then
+    return
+  end
+
+  local id = widget:getId() or ''
+  if string.containsTable(id, primordial) then
+    return
+  end
+
+  if callRestoredWidgetMethod(widget, 'close') then return end
+  if callRestoredWidgetMethod(widget, 'destroy') then return end
+  callRestoredWidgetMethod(widget, 'hide')
+end
+
 function onPlayerLoad(config)
   if not config.leftSidebarCount then
     for i = 1, gameLeftPanels:getChildCount() do
@@ -2304,9 +2330,7 @@ function onPlayerLoad(config)
       local panel = gameRightPanels:getChildByIndex(i)
       if panel then
         for _, widget in pairs(panel:getChildren()) do
-          if widget:isVisible() and not string.containsTable(widget:getId(), primordial) then
-            if widget.close then widget:close() end
-          end
+          closeRestoredWidget(widget, primordial)
         end
 
         for k, x in ipairs(config.openWidgetsOrderPerSidebar[i]) do
@@ -2320,9 +2344,7 @@ function onPlayerLoad(config)
       local panel = gameLeftPanels:getChildByIndex(i)
       if panel then
         for _, widget in pairs(panel:getChildren()) do
-          if widget:isVisible() and not string.containsTable(widget:getId(), primordial) then
-            if widget.close then widget:close() end
-          end
+          closeRestoredWidget(widget, primordial)
         end
 
         for k, x in ipairs(config.openWidgetsOrderPerSidebar[i + rightPanels]) do
@@ -2334,9 +2356,7 @@ function onPlayerLoad(config)
     -- get Right Horizontal
     if config.openWidgetsHorizontalRight then
       for _, widget in pairs(horizontalRightPanel:getChildren()) do
-        if widget:isVisible() and not string.containsTable(widget:getId(), primordial) then
-          if widget.close then widget:close() end
-        end
+        closeRestoredWidget(widget, primordial)
       end
 
       for k, x in ipairs(config.openWidgetsHorizontalRight) do
@@ -2380,9 +2400,7 @@ function onPlayerLoad(config)
     -- get Left Horizontal
     if config.openWidgetsHorizontalLeft then
       for _, widget in pairs(horizontalLeftPanel:getChildren()) do
-        if widget:isVisible() and not string.containsTable(widget:getId(), primordial) then
-          if widget.close then widget:close() end
-        end
+        closeRestoredWidget(widget, primordial)
       end
 
       for k, x in ipairs(config.openWidgetsHorizontalLeft) do
