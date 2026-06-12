@@ -111,8 +111,9 @@ function onSoulsealsData(entries, balance)
 
     if type(entries) == "table" and #entries > 0 then
         for _, entry in ipairs(entries) do
+            local raceData = g_things.registerRaceDataFromPacket and g_things.registerRaceDataFromPacket(entry) or nil
             local raceId = tonumber(entry.raceId) or 0
-            local name = entry.name or "unknown"
+            local name = (raceData and raceData.name) or entry.name or "unknown"
             local cost = tonumber(entry.cost) or 0
             local stars = tonumber(entry.stars) or 0
             local mastered = tonumber(entry.mastered) or tonumber(entry.done) or 0

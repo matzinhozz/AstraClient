@@ -57,21 +57,21 @@ function onSoulsealsData(entries, balance)
                     outfit = nil,
                 })
             else
+                local raceData = g_things.registerRaceDataFromPacket and g_things.registerRaceDataFromPacket(entry) or nil
                 local name = entry.name or ("Creature " .. tostring(entry.raceId or "?"))
                 local points = tonumber(entry.cost) or tonumber(entry.soulsealPoints) or 0
                 local done = tonumber(entry.mastered) or tonumber(entry.done) or 0
                 table.insert(cachedEntries, {
                     raceId = tonumber(entry.raceId) or 0,
-                    name = tostring(name),
+                    name = tostring((raceData and raceData.name) or name),
                     points = points,
                     done = done == 1,
                     category = tonumber(entry.stars) or tonumber(entry.category) or 0,
-                    outfit = entry.outfit,
+                    outfit = (raceData and raceData.outfit) or entry.outfit,
                 })
             end
         end
         showWindow()
-        updateBalance(cachedBalance)
     end
 end
 

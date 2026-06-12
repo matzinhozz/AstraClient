@@ -36,9 +36,7 @@ function TaskShop.onShopData(items, taskHuntingPoints)
     local oldData = shopData
     shopData = items or {}
 
-    if taskHuntingPoints ~= nil then
-        applyTaskHuntingBalance(taskHuntingPoints)
-    end
+    applyTaskHuntingBalance(taskHuntingPoints ~= nil and taskHuntingPoints or currentBalance)
 
     if not shopGrid or #oldData ~= #shopData or shopGrid:getChildCount() ~= #shopData then
         TaskShop.rebuild()

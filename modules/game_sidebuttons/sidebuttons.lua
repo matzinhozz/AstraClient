@@ -10,11 +10,14 @@ currentOpenWidget = nil
 local MAIN_BUTTONS_BASE_HEIGHT = 101 -- 77px base + 20px Battle Pass button + 4px margin
 
 -- Hotfix when a new button is introduced
-local forceButtons = { "weaponProficiency", "taskHuntDialog" }
+local forceButtons = {
+  { id = "weaponProficiency" },
+  { id = "taskHuntDialog", after = "skillWheelDialog" }
+}
 
 local buttons = {
   "skillsButton", "battleButton", "partyList", "vipButton", "spellList", "wheel", "questLog",
-  "questTracker", "unjustPoints", "preyDialog", "preyWindow", "rewardWall",
+  "questTracker", "unjustPoints", "preyDialog", "preyWindow", "rewardWallDialog",
   "analytics", "compendium", "cyclopedia", "bosstiaryDialog", "bossSlots",
   "bosstiaryTracker", "bestiary", "imbueTracker", "exaltationForge",
   "socialDialog", "lenshelpFunction", "highscore", "helperDialog", "weaponProficiency",
@@ -34,6 +37,20 @@ function getControlButtonTooltip(button)
   return buttonTooltip
 end
 
+local function ensureForcedButtons(activeWidgets, inactiveWidgets)
+  for _, button in ipairs(forceButtons) do
+    local buttonId = button.id
+    if not table.find(activeWidgets, buttonId) and not table.find(inactiveWidgets, buttonId) then
+      local afterIndex = button.after and table.find(activeWidgets, button.after) or nil
+      if type(afterIndex) == "number" then
+        table.insert(activeWidgets, afterIndex + 1, buttonId)
+      else
+        table.insert(activeWidgets, buttonId)
+      end
+    end
+  end
+end
+
 function openBattlePassWindow()
   if modules.game_battlepass and modules.game_battlepass.BattlePass then
     modules.game_battlepass.BattlePass.onBattlePassBarClick()
@@ -49,11 +66,7 @@ function init()
 
   storeBorder:setImageShader("text_staff")
 
-  for k, v in pairs(forceButtons) do
-    if not table.find(activeWidgets, v) and not table.find(inactiveWidgets, v) then
-      table.insert(activeWidgets, v)
-    end
-  end
+  ensureForcedButtons(activeWidgets, inactiveWidgets)
 
   for _, v in pairs(activeWidgets) do
     local widget = g_ui.createWidget("UISideButton", buttonPanel)
@@ -113,11 +126,7 @@ function updateSideButtons()
   local inactiveWidgets = Options.getInactiveWidgets()
   local buttonPanel = buttonsWindow:recursiveGetChildById("buttons")
 
-  for k, v in pairs(forceButtons) do
-    if not table.find(activeWidgets, v) and not table.find(inactiveWidgets, v) then
-      table.insert(activeWidgets, v)
-    end
-  end
+  ensureForcedButtons(activeWidgets, inactiveWidgets)
 
   buttonPanel:destroyChildren()
   for _, v in pairs(activeWidgets) do

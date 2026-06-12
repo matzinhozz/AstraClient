@@ -79,6 +79,19 @@ uint32_t getBoundedItemCount(const InputMessagePtr& msg, uint32_t count, const c
     }
     return count;
 }
+
+void readTaskCreatureDisplay(const InputMessagePtr& msg, std::map<std::string, std::string>& entry)
+{
+    auto stringify = [](uint64_t v) { return std::to_string(v); };
+
+    entry["name"] = msg->getString();
+    entry["lookType"] = stringify(msg->getU16());
+    entry["lookHead"] = stringify(msg->getU8());
+    entry["lookBody"] = stringify(msg->getU8());
+    entry["lookLegs"] = stringify(msg->getU8());
+    entry["lookFeet"] = stringify(msg->getU8());
+    entry["lookAddons"] = stringify(msg->getU8());
+}
 }
 
 void ProtocolGame::parseMessage(const InputMessagePtr& msg)
@@ -4645,7 +4658,8 @@ void ProtocolGame::parseMultiOfflineTrainingDialog(const InputMessagePtr& /*msg*
 void ProtocolGame::parseTaskHuntingBasicData(const InputMessagePtr& msg)
 {
     // Matches server protocol.lua sendSoulSealsData byte-for-byte
-    // Server sends: opcode 0xBA -> balance(U32) + count(U16) + entries{raceId(U16), name(str), stars(U8), cost(U32), mastered(U8)}
+    // Server sends: opcode 0xBA -> balance(U32) + count(U16) +
+    // entries{raceId(U16), name(str), outfit(U16+5 bytes), stars(U8), cost(U32), mastered(U8)}
     auto stringify = [](uint64_t v) { return std::to_string(v); };
 
     const uint32_t balance = msg->getU32();
@@ -4657,7 +4671,7 @@ void ProtocolGame::parseTaskHuntingBasicData(const InputMessagePtr& msg)
     for (uint16_t i = 0; i < count; ++i) {
         std::map<std::string, std::string> entry;
         entry["raceId"] = stringify(msg->getU16());
-        entry["name"] = msg->getString();
+        readTaskCreatureDisplay(msg, entry);
         entry["stars"] = stringify(msg->getU8());
         entry["cost"] = stringify(msg->getU32());
         entry["mastered"] = stringify(msg->getU8());
@@ -4701,6 +4715,7 @@ void ProtocolGame::parseTaskBoardBountyData(const InputMessagePtr& msg)
     for (uint8_t i = 0; i < 3; ++i) {
         std::map<std::string, std::string> entry;
         entry["raceId"] = stringify(msg->getU16());
+        readTaskCreatureDisplay(msg, entry);
         entry["currentKills"] = stringify(msg->getU16());
         entry["totalKills"] = stringify(msg->getU16());
         entry["rewardXp"] = stringify(msg->getU16());
@@ -4789,6 +4804,7 @@ void ProtocolGame::parseTaskBoardWeeklyData(const InputMessagePtr& msg)
     for (uint8_t i = 0; i < killTaskCount; ++i) {
         std::map<std::string, std::string> entry;
         entry["raceId"] = stringify(msg->getU16());
+        readTaskCreatureDisplay(msg, entry);
         const uint16_t kills = msg->getU16();
         const uint16_t required = msg->getU16();
         entry["current"] = stringify(kills);
@@ -4805,6 +4821,7 @@ void ProtocolGame::parseTaskBoardWeeklyData(const InputMessagePtr& msg)
     for (uint8_t i = 0; i < deliveryTaskCount; ++i) {
         std::map<std::string, std::string> entry;
         entry["itemId"] = stringify(msg->getU16());
+        entry["clientId"] = stringify(msg->getU16());
         const uint8_t amount = msg->getU8();
         const uint8_t required = msg->getU8();
         const uint32_t available = msg->getU32();
@@ -4817,7 +4834,6 @@ void ProtocolGame::parseTaskBoardWeeklyData(const InputMessagePtr& msg)
         entry["grade"] = stringify(grade);
         entry["claimed"] = "0";
         entry["state"] = amount >= required ? "1" : "0";
-        entry["clientId"] = entry["itemId"];
         items.emplace_back(std::move(entry));
     }
 
