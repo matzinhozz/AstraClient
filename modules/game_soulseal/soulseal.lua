@@ -22,20 +22,12 @@ function terminate()
     hideWindow()
 end
 
-function onSoulsealsData(msg)
+function onSoulsealsData(entries, balance)
     g_logger.info("[SoulSeal] Received soulseal data from server")
-    -- Parse the message (server sends raceIds, categories, points etc.)
-    -- For now, msg contains the raw InputMessage data
-    -- When server is implemented, this will be proper structured data
-    if not msg or type(msg) == "userdata" then
-        g_logger.info("[SoulSeal] Raw message received - server implementation pending")
-        return
-    end
 
-    -- If server sends proper table data:
-    if type(msg) == "table" then
+    if type(entries) == "table" then
         cachedEntries = {}
-        for _, entry in ipairs(msg) do
+        for _, entry in ipairs(entries) do
             if type(entry) ~= "table" then
                 local raceId = tonumber(entry) or 0
                 table.insert(cachedEntries, {
@@ -47,13 +39,15 @@ function onSoulsealsData(msg)
                     outfit = nil,
                 })
             else
-                local name = entry.name or entry.displayName or ("Creature " .. tostring(entry.raceId or "?"))
+                local name = entry.name or ("Creature " .. tostring(entry.raceId or "?"))
+                local points = tonumber(entry.cost) or tonumber(entry.soulsealPoints) or 0
+                local done = tonumber(entry.mastered) or tonumber(entry.done) or 0
                 table.insert(cachedEntries, {
                     raceId = tonumber(entry.raceId) or 0,
                     name = tostring(name),
-                    points = tonumber(entry.soulsealPoints) or 0,
-                    done = entry.done == true or entry.done == 1,
-                    category = tonumber(entry.category) or 0,
+                    points = points,
+                    done = done == 1,
+                    category = tonumber(entry.stars) or tonumber(entry.category) or 0,
                     outfit = entry.outfit,
                 })
             end
@@ -156,7 +150,7 @@ function updateBalance()
 
     local player = g_game.getLocalPlayer()
     if player then
-        local balance = tonumber(player:getResourceBalance("soulseals")) or 0
+        local balance = tonumber(player:getResourceBalance(87)) or 0  -- SOULSEAL_POINTS
         pointsLabel:setText("Soulseals: " .. tostring(balance))
     end
 end

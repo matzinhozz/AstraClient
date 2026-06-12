@@ -1529,42 +1529,113 @@ void Game::bountyTaskAction(int actionType, int param)
 {
     if (!canPerformGameAction())
         return;
-    m_protocolGame->sendBountyTaskAction(actionType, param);
+
+    // Map Lua action types (bounty-tasks.lua) to wire protocol option bytes (0x5F)
+    switch (actionType) {
+        case 0: // ACTION_REROLL
+            m_protocolGame->sendTaskBoardAction(3);  // BOUNTY_REROLL
+            break;
+        case 1: // ACTION_SELECT
+            m_protocolGame->sendTaskBoardAction(5, static_cast<uint16_t>(param));  // BOUNTY_SELECT_TASK
+            break;
+        case 2: // ACTION_CLAIM_REWARD
+            m_protocolGame->sendTaskBoardAction(6);  // BOUNTY_CLAIM_REWARD
+            break;
+        case 3: // ACTION_CHANGE_DIFFICULTY
+            m_protocolGame->sendTaskBoardAction(2, static_cast<uint16_t>(param));  // BOUNTY_CHANGE_DIFFICULTY
+            break;
+        case 4: // ACTION_REQUEST
+            m_protocolGame->sendTaskBoardAction(0);  // OPEN_BOUNTY
+            break;
+        case 5: // ACTION_CLAIM_DAILY
+            m_protocolGame->sendTaskBoardAction(4);  // BOUNTY_CLAIM_DAILY
+            break;
+        default:
+            g_logger.warning(stdext::format("Unknown bounty task action type %d", actionType));
+            break;
+    }
 }
 
 void Game::weeklyTaskAction(int actionType, int param)
 {
     if (!canPerformGameAction())
         return;
-    m_protocolGame->sendWeeklyTaskAction(actionType, param);
+
+    // Map Lua action types to wire protocol option bytes
+    switch (actionType) {
+        case 0: // WEEKLY_ACTION_SELECT_DIFFICULTY
+            m_protocolGame->sendTaskBoardAction(9, static_cast<uint16_t>(param));  // WEEKLY_SELECT_DIFFICULTY
+            break;
+        case 1: // WEEKLY_ACTION_DELIVER_ITEM
+            m_protocolGame->sendTaskBoardAction(8, static_cast<uint16_t>(param));  // WEEKLY_DELIVER
+            break;
+        case 2: // WEEKLY_ACTION_REFRESH_DATA
+            m_protocolGame->sendTaskBoardAction(1);  // OPEN_WEEKLY
+            break;
+        default:
+            g_logger.warning(stdext::format("Unknown weekly task action type %d", actionType));
+            break;
+    }
 }
 
 void Game::taskHuntingShopRequest()
 {
     if (!canPerformGameAction())
         return;
-    m_protocolGame->sendTaskHuntingShopRequest();
+    m_protocolGame->sendTaskBoardAction(10);  // OPEN_HUNTING_SHOP
 }
 
 void Game::taskHuntingShopPurchase(int itemId)
 {
     if (!canPerformGameAction())
         return;
-    m_protocolGame->sendTaskHuntingShopPurchase(itemId);
+    m_protocolGame->sendTaskBoardAction(11, static_cast<uint16_t>(itemId));  // BUY_SHOP_OFFER
 }
 
 void Game::bountyPreferredAction(int actionType, int slot, int raceId)
 {
     if (!canPerformGameAction())
         return;
-    m_protocolGame->sendBountyPreferredAction(actionType, slot, raceId);
+
+    switch (actionType) {
+        case 0: // PREFERRED_ACTION_REQUEST
+            m_protocolGame->sendTaskBoardAction(0);  // OPEN_BOUNTY
+            break;
+        case 1: // PREFERRED_ACTION_BUY_SLOT
+            if (slot > 0)
+                m_protocolGame->sendTaskBoardAction(12, static_cast<uint16_t>(slot));  // PREFERRED_UNLOCK
+            break;
+        case 2: // PREFERRED_ACTION_SET_PREFERRED
+            if (slot > 0 && raceId > 0)
+                m_protocolGame->sendTaskBoardAction(15, static_cast<uint16_t>(slot), static_cast<uint16_t>(raceId));  // PREFERRED_ASSIGN
+            break;
+        case 3: // PREFERRED_ACTION_SET_UNWANTED
+            if (slot > 0 && raceId > 0)
+                m_protocolGame->sendTaskBoardAction(16, static_cast<uint16_t>(slot), static_cast<uint16_t>(raceId));  // UNWANTED_ASSIGN
+            break;
+        case 4: // PREFERRED_ACTION_REMOVE_PREFERRED
+            if (slot > 0)
+                m_protocolGame->sendTaskBoardAction(13, static_cast<uint16_t>(slot));  // PREFERRED_CLEAR
+            break;
+        case 5: // PREFERRED_ACTION_REMOVE_UNWANTED
+            if (slot > 0)
+                m_protocolGame->sendTaskBoardAction(14, static_cast<uint16_t>(slot));  // UNWANTED_CLEAR
+            break;
+        default:
+            g_logger.warning(stdext::format("Unknown bounty preferred action type %d", actionType));
+            break;
+    }
 }
 
 void Game::bountyTalismanUpgrade(int statType)
 {
     if (!canPerformGameAction())
         return;
-    m_protocolGame->sendBountyTalismanUpgrade(statType);
+    if (statType < 0 || statType > 3) {
+        g_logger.warning(stdext::format("bountyTalismanUpgrade: invalid pathIndex %d", statType));
+        return;
+    }
+    m_protocolGame->sendTaskBoardAction(7, static_cast<uint16_t>(statType));  // BOUNTY_TALISMAN_UPGRADE
 }
 
 void Game::preyRequest()
@@ -1887,6 +1958,13 @@ void Game::soulsealFightAction(const uint16_t raceId)
     if (!m_protocolGame)
         return;
     m_protocolGame->sendSoulSealsAction(raceId);
+}
+
+void Game::soulsealRequest()
+{
+    if (!canPerformGameAction())
+        return;
+    m_protocolGame->sendTaskBoardAction(17);  // OPEN_SOULSEAL
 }
 
 void Game::sendTutorialChangeVocation(const uint8_t vocationClientId)
