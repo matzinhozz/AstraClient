@@ -4947,6 +4947,5 @@ void ProtocolGame::parseTaskBoardShopData(const InputMessagePtr& msg)
         items.emplace_back(std::move(entry));
     }
 
-    // Include taskHuntingPoints as first entry's balance for Lua UI compat
-    g_lua.callGlobalField("g_game", "onTaskHuntingShopData", items);
+    g_lua.callGlobalField("g_game", "onTaskHuntingShopData", items, taskHuntingPoints);
 }

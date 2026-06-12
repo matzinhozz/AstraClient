@@ -9,6 +9,12 @@ local function getSoulsealBalance()
     return player and player:getResourceBalance(ResourceTypes.SOULSEAL_POINTS) or 0
 end
 
+local function setSoulsealBalance(balance)
+    if soulsealWindow then
+        soulsealWindow.balancePanel.balanceLabel:setText(comma_value(balance))
+    end
+end
+
 function init()
     soulsealWindow = g_ui.displayUI('game_soulseal')
     UIModalOverlay.register(soulsealWindow)
@@ -126,16 +132,14 @@ function onSoulsealsData(entries, balance)
         end
     end
 
-    -- Update balance display from the balance parameter if provided
-    if balance and soulsealWindow then
-        soulsealWindow.balancePanel.balanceLabel:setText(comma_value(balance))
+    local currentBalance = tonumber(balance)
+    if currentBalance == nil then
+        currentBalance = getSoulsealBalance()
     end
+    setSoulsealBalance(currentBalance)
 
     show()
     refreshList()
-    if not balance and soulsealWindow then
-        soulsealWindow.balancePanel.balanceLabel:setText(comma_value(getSoulsealBalance()))
-    end
 end
 
 function onResourceBalance(balance, _, resourceType)
@@ -143,7 +147,7 @@ function onResourceBalance(balance, _, resourceType)
         return
     end
     if soulsealWindow and soulsealWindow:isVisible() then
-        soulsealWindow.balancePanel.balanceLabel:setText(comma_value(balance))
+        setSoulsealBalance(balance)
     end
 end
 

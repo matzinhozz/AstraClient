@@ -10,7 +10,7 @@ currentOpenWidget = nil
 local MAIN_BUTTONS_BASE_HEIGHT = 101 -- 77px base + 20px Battle Pass button + 4px margin
 
 -- Hotfix when a new button is introduced
-local forceButtons = { "weaponProficiency" }
+local forceButtons = { "weaponProficiency", "taskHuntDialog" }
 
 local buttons = {
   "skillsButton", "battleButton", "partyList", "vipButton", "spellList", "wheel", "questLog",
@@ -253,11 +253,7 @@ function isToggleButton(buttonId)
   for _, toggleButtonId in pairs(toggleButtons) do
       if buttonId == toggleButtonId then
           return true
-  elseif parentId == "taskHuntDialog" then
-    if modules.game_task_hunt and modules.game_task_hunt.hide then
-      modules.game_task_hunt.hide()
     end
-  end
   end
   return false
 end
@@ -420,6 +416,10 @@ function forceCloseButton(button)
   elseif parentId == "manageShortcuts" then
     if m_settings and m_settings.closeOptions then
       m_settings.closeOptions()
+    end
+  elseif parentId == "taskHuntDialog" then
+    if modules.game_task_hunt and modules.game_task_hunt.hide then
+      modules.game_task_hunt.hide()
     end
   end
 end

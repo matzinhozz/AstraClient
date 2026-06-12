@@ -72,7 +72,7 @@ struct TaskBoardBountyMonsterData {
     uint16_t currentKills{ 0 };
     uint16_t totalKills{ 0 };
     uint16_t rewardXp{ 0 };
-    uint8_t rewardPoints{ 0 };
+    uint16_t rewardPoints{ 0 };
     uint8_t grade{ 0 };
     uint8_t claimState{ 0 };
     uint8_t isActive{ 0 };

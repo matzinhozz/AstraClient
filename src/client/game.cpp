@@ -39,7 +39,44 @@
 #include <framework/net/packet_player.h>
 #include <framework/net/packet_recorder.h>
 
+#include <limits>
+
 Game g_game;
+
+namespace {
+
+bool validateTaskBoardParam(const char* action, const char* field, int value, int maxValue)
+{
+    if (value < 0 || value > maxValue) {
+        g_logger.warning(stdext::format("%s: invalid %s %d", action, field, value));
+        return false;
+    }
+    return true;
+}
+
+bool validateTaskBoardU8Param(const char* action, const char* field, int value)
+{
+    return validateTaskBoardParam(action, field, value, std::numeric_limits<uint8_t>::max());
+}
+
+bool validateTaskBoardU16Param(const char* action, const char* field, int value)
+{
+    return validateTaskBoardParam(action, field, value, std::numeric_limits<uint16_t>::max());
+}
+
+bool validateTaskBoardPositiveU16Param(const char* action, const char* field, int value)
+{
+    if (!validateTaskBoardU16Param(action, field, value))
+        return false;
+
+    if (value == 0) {
+        g_logger.warning(stdext::format("%s: invalid %s %d", action, field, value));
+        return false;
+    }
+    return true;
+}
+
+} // namespace
 
 Game::Game()
 {
@@ -1536,12 +1573,16 @@ void Game::bountyTaskAction(int actionType, int param)
             m_protocolGame->sendTaskBoardAction(3);  // BOUNTY_REROLL
             break;
         case 1: // ACTION_SELECT
+            if (!validateTaskBoardU8Param("bountyTaskAction", "param", param))
+                return;
             m_protocolGame->sendTaskBoardAction(5, static_cast<uint16_t>(param));  // BOUNTY_SELECT_TASK
             break;
         case 2: // ACTION_CLAIM_REWARD
             m_protocolGame->sendTaskBoardAction(6);  // BOUNTY_CLAIM_REWARD
             break;
         case 3: // ACTION_CHANGE_DIFFICULTY
+            if (!validateTaskBoardU8Param("bountyTaskAction", "param", param))
+                return;
             m_protocolGame->sendTaskBoardAction(2, static_cast<uint16_t>(param));  // BOUNTY_CHANGE_DIFFICULTY
             break;
         case 4: // ACTION_REQUEST
@@ -1564,9 +1605,13 @@ void Game::weeklyTaskAction(int actionType, int param)
     // Map Lua action types to wire protocol option bytes
     switch (actionType) {
         case 0: // WEEKLY_ACTION_SELECT_DIFFICULTY
+            if (!validateTaskBoardU8Param("weeklyTaskAction", "param", param))
+                return;
             m_protocolGame->sendTaskBoardAction(9, static_cast<uint16_t>(param));  // WEEKLY_SELECT_DIFFICULTY
             break;
         case 1: // WEEKLY_ACTION_DELIVER_ITEM
+            if (!validateTaskBoardU8Param("weeklyTaskAction", "param", param))
+                return;
             m_protocolGame->sendTaskBoardAction(8, static_cast<uint16_t>(param));  // WEEKLY_DELIVER
             break;
         case 2: // WEEKLY_ACTION_REFRESH_DATA
@@ -1589,6 +1634,8 @@ void Game::taskHuntingShopPurchase(int itemId)
 {
     if (!canPerformGameAction())
         return;
+    if (!validateTaskBoardU8Param("taskHuntingShopPurchase", "itemId", itemId))
+        return;
     m_protocolGame->sendTaskBoardAction(11, static_cast<uint16_t>(itemId));  // BUY_SHOP_OFFER
 }
 
@@ -1602,24 +1649,33 @@ void Game::bountyPreferredAction(int actionType, int slot, int raceId)
             m_protocolGame->sendTaskBoardAction(0);  // OPEN_BOUNTY
             break;
         case 1: // PREFERRED_ACTION_BUY_SLOT
-            if (slot > 0)
-                m_protocolGame->sendTaskBoardAction(12, static_cast<uint16_t>(slot));  // PREFERRED_UNLOCK
+            if (!validateTaskBoardPositiveU16Param("bountyPreferredAction", "slot", slot))
+                return;
+            m_protocolGame->sendTaskBoardAction(12, static_cast<uint16_t>(slot));  // PREFERRED_UNLOCK
             break;
         case 2: // PREFERRED_ACTION_SET_PREFERRED
-            if (slot > 0 && raceId > 0)
-                m_protocolGame->sendTaskBoardAction(15, static_cast<uint16_t>(slot), static_cast<uint16_t>(raceId));  // PREFERRED_ASSIGN
+            if (!validateTaskBoardPositiveU16Param("bountyPreferredAction", "slot", slot))
+                return;
+            if (!validateTaskBoardPositiveU16Param("bountyPreferredAction", "raceId", raceId))
+                return;
+            m_protocolGame->sendTaskBoardAction(15, static_cast<uint16_t>(slot), static_cast<uint16_t>(raceId));  // PREFERRED_ASSIGN
             break;
         case 3: // PREFERRED_ACTION_SET_UNWANTED
-            if (slot > 0 && raceId > 0)
-                m_protocolGame->sendTaskBoardAction(16, static_cast<uint16_t>(slot), static_cast<uint16_t>(raceId));  // UNWANTED_ASSIGN
+            if (!validateTaskBoardPositiveU16Param("bountyPreferredAction", "slot", slot))
+                return;
+            if (!validateTaskBoardPositiveU16Param("bountyPreferredAction", "raceId", raceId))
+                return;
+            m_protocolGame->sendTaskBoardAction(16, static_cast<uint16_t>(slot), static_cast<uint16_t>(raceId));  // UNWANTED_ASSIGN
             break;
         case 4: // PREFERRED_ACTION_REMOVE_PREFERRED
-            if (slot > 0)
-                m_protocolGame->sendTaskBoardAction(13, static_cast<uint16_t>(slot));  // PREFERRED_CLEAR
+            if (!validateTaskBoardPositiveU16Param("bountyPreferredAction", "slot", slot))
+                return;
+            m_protocolGame->sendTaskBoardAction(13, static_cast<uint16_t>(slot));  // PREFERRED_CLEAR
             break;
         case 5: // PREFERRED_ACTION_REMOVE_UNWANTED
-            if (slot > 0)
-                m_protocolGame->sendTaskBoardAction(14, static_cast<uint16_t>(slot));  // UNWANTED_CLEAR
+            if (!validateTaskBoardPositiveU16Param("bountyPreferredAction", "slot", slot))
+                return;
+            m_protocolGame->sendTaskBoardAction(14, static_cast<uint16_t>(slot));  // UNWANTED_CLEAR
             break;
         default:
             g_logger.warning(stdext::format("Unknown bounty preferred action type %d", actionType));

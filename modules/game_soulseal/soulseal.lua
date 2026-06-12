@@ -3,6 +3,7 @@
 local soulsealWindow = nil
 local cachedEntries = {}
 local selectedIndex = 0
+local cachedBalance = nil
 
 local SOULSEAL_CATEGORIES = {
     [1] = "Harmless",
@@ -20,10 +21,27 @@ end
 function terminate()
     disconnect(g_game, { onSoulsealsData = onSoulsealsData })
     hideWindow()
+    cachedBalance = nil
+end
+
+local function getSoulsealResourceBalance()
+    local player = g_game.getLocalPlayer()
+    if not player then return 0 end
+    if not ResourceTypes or not ResourceTypes.SOULSEAL_POINTS then return 0 end
+    return tonumber(player:getResourceBalance(ResourceTypes.SOULSEAL_POINTS)) or 0
+end
+
+local function resolveSoulsealBalance(balance)
+    local resolved = tonumber(balance)
+    if resolved ~= nil then
+        return resolved
+    end
+    return getSoulsealResourceBalance()
 end
 
 function onSoulsealsData(entries, balance)
     g_logger.info("[SoulSeal] Received soulseal data from server")
+    cachedBalance = resolveSoulsealBalance(balance)
 
     if type(entries) == "table" then
         cachedEntries = {}
@@ -53,6 +71,7 @@ function onSoulsealsData(entries, balance)
             end
         end
         showWindow()
+        updateBalance(cachedBalance)
     end
 end
 
@@ -61,6 +80,7 @@ function showWindow()
         soulsealWindow:raise()
         soulsealWindow:show()
         refreshList()
+        updateBalance(cachedBalance)
         return
     end
 
@@ -79,7 +99,7 @@ function showWindow()
     end
 
     refreshList()
-    updateBalance()
+    updateBalance(cachedBalance)
 end
 
 function hideWindow()
@@ -143,16 +163,13 @@ function updateSelection()
     fightBtn:setEnabled(not entry.done)
 end
 
-function updateBalance()
+function updateBalance(balance)
     if not soulsealWindow or soulsealWindow:isDestroyed() then return end
     local pointsLabel = soulsealWindow:recursiveGetChildById("pointsLabel")
     if not pointsLabel then return end
 
-    local player = g_game.getLocalPlayer()
-    if player then
-        local balance = tonumber(player:getResourceBalance(87)) or 0  -- SOULSEAL_POINTS
-        pointsLabel:setText("Soulseals: " .. tostring(balance))
-    end
+    cachedBalance = resolveSoulsealBalance(balance)
+    pointsLabel:setText("Soulseals: " .. tostring(cachedBalance))
 end
 
 function doFight()
