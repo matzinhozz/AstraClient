@@ -668,6 +668,9 @@ void ProtocolGame::parseMessage(const InputMessagePtr& msg)
             case Proto::GameServerFeatures:
                 parseFeatures(msg);
                 break;
+            case Proto::GameServerAstraItemTooltipResponse:
+                parseAstraItemTooltip(msg);
+                break;
             case Proto::GameServerNewCancelWalk:
                 if (g_game.getFeature(Otc::GameNewWalking))
                     parseNewCancelWalk(msg);
@@ -4251,6 +4254,217 @@ void ProtocolGame::parseFeatures(const InputMessagePtr& msg)
         } else {
             g_game.disableFeature(feature);
         }
+    }
+}
+
+void ProtocolGame::parseAstraItemTooltip(const InputMessagePtr& msg)
+{
+    // Section flags — must mirror AstraItemTooltip::Flags on the server.
+    static const uint32 FLAG_HAS_INSTANCE_DATA = 1u << 0;
+    static const uint32 FLAG_HAS_STATS = 1u << 1;
+    static const uint32 FLAG_HAS_REQUIREMENTS = 1u << 2;
+    static const uint32 FLAG_HAS_IMBUEMENTS = 1u << 3;
+    static const uint32 FLAG_HAS_AUGMENTS = 1u << 4;
+    static const uint32 FLAG_HAS_IMPLICITS = 1u << 5;
+    static const uint32 FLAG_HAS_CHARGES = 1u << 6;
+    static const uint32 FLAG_HAS_DURATION = 1u << 7;
+    static const uint32 FLAG_IS_CONTAINER = 1u << 8;
+    static const uint32 FLAG_IS_WEAPON = 1u << 9;
+    static const uint32 FLAG_IS_ARMOR = 1u << 10;
+
+    const uint8 requestId = msg->getU8();
+    const uint8 status = msg->getU8();
+
+    // Error / no-payload response: tell Lua so it can clear its pending state.
+    if (status != 0) {
+        g_lua.getGlobalField("g_game", "onAstraItemTooltip");
+        if (g_lua.isNil()) {
+            g_lua.pop(1);
+            return;
+        }
+        g_lua.createTable(0, 2);
+        g_lua.pushInteger(requestId); g_lua.setField("requestId");
+        g_lua.pushInteger(status);    g_lua.setField("status");
+        const int rets = g_lua.signalCall(1);
+        if (rets > 0) {
+            g_lua.pop(rets);
+        }
+        return;
+    }
+
+    // Copy the declared payload out of the main stream into a private message.
+    // Reading exactly payloadSize bytes here advances the main stream by that
+    // amount (so the rest of the packet always stays aligned), and every field
+    // is then read from the private buffer — a malformed payload throws only on
+    // that buffer, never desyncing the connection. No throw on the main stream.
+    const uint16 payloadSize = msg->getU16();
+    if (payloadSize > static_cast<uint32>(msg->getUnreadSize())) {
+        return; // corrupt length prefix: cannot realign safely, drop gracefully
+    }
+
+    std::string payloadBytes(payloadSize, '\0');
+    for (uint16 i = 0; i < payloadSize; ++i) {
+        payloadBytes[i] = static_cast<char>(msg->getU8());
+    }
+    const auto payload = std::make_shared<InputMessage>();
+    payload->setBuffer(payloadBytes);
+
+    uint16 clientId = 0, serverId = 0, requiredLevel = 0, requiredMagicLevel = 0, containerCapacity = 0;
+    uint8 sourceType = 0, category = 0, weaponType = 0, classification = 0, tier = 0, imbuementSlots = 0;
+    uint32 flags = 0, weight = 0, charges = 0, duration = 0;
+    bool hasCharges = false, hasDuration = false, durationPaused = false;
+    int32 attack = 0, defense = 0, extraDefense = 0, armor = 0, hitChance = 0, shootRange = 0;
+    std::string itemName, description, vocation;
+    std::vector<std::tuple<std::string, uint32, uint8>> imbuements;
+    std::vector<std::string> augments, implicits;
+
+    try {
+        clientId = payload->getU16();
+        serverId = payload->getU16();
+        sourceType = payload->getU8();
+        flags = payload->getU32();
+        itemName = payload->getString();
+        description = payload->getString();
+        weight = payload->getU32();
+        category = payload->getU8();
+        weaponType = payload->getU8();
+        classification = payload->getU8();
+        tier = payload->getU8();
+
+        if (flags & FLAG_HAS_STATS) {
+            attack = static_cast<int32>(payload->getU32());
+            defense = static_cast<int32>(payload->getU32());
+            extraDefense = static_cast<int32>(payload->getU32());
+            armor = static_cast<int32>(payload->getU32());
+            hitChance = static_cast<int32>(payload->getU32());
+            shootRange = static_cast<int32>(payload->getU32());
+        }
+        if (flags & FLAG_HAS_REQUIREMENTS) {
+            requiredLevel = payload->getU16();
+            requiredMagicLevel = payload->getU16();
+            vocation = payload->getString();
+        }
+        if (flags & FLAG_HAS_IMBUEMENTS) {
+            imbuementSlots = payload->getU8();
+            const uint8 appliedCount = payload->getU8();
+            imbuements.reserve(appliedCount);
+            for (uint8 i = 0; i < appliedCount; ++i) {
+                const std::string name = payload->getString();
+                const uint32 imbDuration = payload->getU32();
+                const uint8 imbuementTier = payload->getU8();
+                imbuements.emplace_back(name, imbDuration, imbuementTier);
+            }
+        }
+        if (flags & FLAG_HAS_AUGMENTS) {
+            const uint8 count = payload->getU8();
+            augments.reserve(count);
+            for (uint8 i = 0; i < count; ++i) {
+                augments.push_back(payload->getString());
+            }
+        }
+        if (flags & FLAG_HAS_IMPLICITS) {
+            const uint8 count = payload->getU8();
+            implicits.reserve(count);
+            for (uint8 i = 0; i < count; ++i) {
+                implicits.push_back(payload->getString());
+            }
+        }
+        if (flags & FLAG_HAS_CHARGES) {
+            charges = payload->getU32();
+            hasCharges = true;
+        }
+        if (flags & FLAG_HAS_DURATION) {
+            duration = payload->getU32();
+            durationPaused = payload->getU8() != 0;
+            hasDuration = true;
+        }
+        if (flags & FLAG_IS_CONTAINER) {
+            containerCapacity = payload->getU16();
+        }
+    } catch (const stdext::exception&) {
+        return; // malformed payload; main stream already aligned, so just drop it
+    }
+
+    g_lua.getGlobalField("g_game", "onAstraItemTooltip");
+    if (g_lua.isNil()) {
+        g_lua.pop(1);
+        return;
+    }
+
+    g_lua.createTable(0, 28);
+    g_lua.pushInteger(requestId);       g_lua.setField("requestId");
+    g_lua.pushInteger(status);          g_lua.setField("status");
+    g_lua.pushInteger(clientId);        g_lua.setField("clientId");
+    g_lua.pushInteger(serverId);        g_lua.setField("serverId");
+    g_lua.pushInteger(sourceType);      g_lua.setField("sourceType");
+    g_lua.pushInteger(flags);           g_lua.setField("flags");
+    g_lua.pushString(itemName);         g_lua.setField("name");
+    g_lua.pushString(description);      g_lua.setField("description");
+    g_lua.pushInteger(weight);          g_lua.setField("weight");
+    g_lua.pushInteger(category);        g_lua.setField("category");
+    g_lua.pushInteger(weaponType);      g_lua.setField("weaponType");
+    g_lua.pushInteger(classification);  g_lua.setField("classification");
+    g_lua.pushInteger(tier);            g_lua.setField("tier");
+    g_lua.pushBoolean((flags & FLAG_HAS_INSTANCE_DATA) != 0); g_lua.setField("hasInstanceData");
+    g_lua.pushBoolean((flags & FLAG_IS_CONTAINER) != 0);      g_lua.setField("isContainer");
+    g_lua.pushBoolean((flags & FLAG_IS_WEAPON) != 0);         g_lua.setField("isWeapon");
+    g_lua.pushBoolean((flags & FLAG_IS_ARMOR) != 0);          g_lua.setField("isArmor");
+
+    if (flags & FLAG_HAS_STATS) {
+        g_lua.pushInteger(attack);       g_lua.setField("attack");
+        g_lua.pushInteger(defense);      g_lua.setField("defense");
+        g_lua.pushInteger(extraDefense); g_lua.setField("extraDefense");
+        g_lua.pushInteger(armor);        g_lua.setField("armor");
+        g_lua.pushInteger(hitChance);    g_lua.setField("hitChance");
+        g_lua.pushInteger(shootRange);   g_lua.setField("shootRange");
+    }
+    if (flags & FLAG_HAS_REQUIREMENTS) {
+        g_lua.pushInteger(requiredLevel);      g_lua.setField("requiredLevel");
+        g_lua.pushInteger(requiredMagicLevel); g_lua.setField("requiredMagicLevel");
+        g_lua.pushString(vocation);            g_lua.setField("vocation");
+    }
+    if (flags & FLAG_HAS_IMBUEMENTS) {
+        g_lua.pushInteger(imbuementSlots); g_lua.setField("imbuementSlots");
+        g_lua.createTable(static_cast<int>(imbuements.size()), 0);
+        for (size_t i = 0; i < imbuements.size(); ++i) {
+            g_lua.createTable(0, 3);
+            g_lua.pushString(std::get<0>(imbuements[i]));  g_lua.setField("name");
+            g_lua.pushInteger(std::get<1>(imbuements[i])); g_lua.setField("duration");
+            g_lua.pushInteger(std::get<2>(imbuements[i])); g_lua.setField("tier");
+            g_lua.rawSeti(static_cast<int>(i + 1));
+        }
+        g_lua.setField("imbuements");
+    }
+    if (!augments.empty()) {
+        g_lua.createTable(static_cast<int>(augments.size()), 0);
+        for (size_t i = 0; i < augments.size(); ++i) {
+            g_lua.pushString(augments[i]);
+            g_lua.rawSeti(static_cast<int>(i + 1));
+        }
+        g_lua.setField("augments");
+    }
+    if (!implicits.empty()) {
+        g_lua.createTable(static_cast<int>(implicits.size()), 0);
+        for (size_t i = 0; i < implicits.size(); ++i) {
+            g_lua.pushString(implicits[i]);
+            g_lua.rawSeti(static_cast<int>(i + 1));
+        }
+        g_lua.setField("implicits");
+    }
+    if (hasCharges) {
+        g_lua.pushInteger(charges); g_lua.setField("charges");
+    }
+    if (hasDuration) {
+        g_lua.pushInteger(duration);       g_lua.setField("duration");
+        g_lua.pushBoolean(durationPaused); g_lua.setField("durationPaused");
+    }
+    if (flags & FLAG_IS_CONTAINER) {
+        g_lua.pushInteger(containerCapacity); g_lua.setField("containerCapacity");
+    }
+
+    const int rets = g_lua.signalCall(1);
+    if (rets > 0) {
+        g_lua.pop(rets);
     }
 }
 
